@@ -11,8 +11,10 @@ manage Python:
 - **Tools** — download a module from [mooncakes.io](https://mooncakes.io),
   compile it to a native binary and install it (`mb tool ...`).
 
-Everything installs to `~/.local/bin` by default. Only Linux and macOS
-(including Apple Silicon) are supported.
+Everything installs to `~/.local/bin` by default. Only Linux (`x86_64`,
+`aarch64`) and macOS on Apple Silicon (`arm64`) are supported: the MoonBit
+toolchain no longer ships an Intel macOS target, so there is no
+`darwin-x86_64` build.
 
 ## Install
 
@@ -123,8 +125,8 @@ $MB_HOME/
 - `.github/workflows/ci.yml` runs `moon check`, `moon test` and a native
   release build on Linux and macOS.
 - `.github/workflows/release.yml` builds `mb` for `linux-x86_64`,
-  `linux-aarch64`, `darwin-aarch64` and `darwin-x86_64` and attaches the
-  binaries to a GitHub Release when a `v*` tag is pushed:
+  `linux-aarch64` and `darwin-aarch64` and attaches the binaries (plus
+  `.sha256` checksums) to a GitHub Release when a `v*` tag is pushed:
 
   ```bash
   git tag v0.1.1 && git push origin v0.1.1

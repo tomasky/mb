@@ -30,10 +30,6 @@ jobs:
             target: linux-aarch64
           - runner: macos-15
             target: darwin-aarch64
-          # `macos-13` was retired, so it is the Intel image that has to be
-          # requested explicitly. `macos-14` (arm64) is deprecated too.
-          - runner: macos-15-intel
-            target: darwin-x86_64
     steps:
       - uses: actions/checkout@v4
 

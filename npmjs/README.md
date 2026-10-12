@@ -24,7 +24,9 @@ Supported targets:
 | `linux-x64`          | `mb-linux-x86_64`   |
 | `linux-arm64`        | `mb-linux-aarch64`  |
 | `darwin-arm64`       | `mb-darwin-aarch64` |
-| `darwin-x64`         | `mb-darwin-x86_64`  |
+
+Intel macOS (`darwin-x64`) is not supported: the MoonBit toolchain no longer
+ships a `darwin-x86_64` target, so no such build can be produced.
 
 Assets are produced by `.github/workflows/release.yml` when a `v*` tag is
 pushed.

@@ -20,7 +20,6 @@ const TARGETS = {
   "linux-x64": "linux-x86_64",
   "linux-arm64": "linux-aarch64",
   "darwin-arm64": "darwin-aarch64",
-  "darwin-x64": "darwin-x86_64",
 };
 
 function repoSlug(repo) {
@@ -79,8 +78,9 @@ async function main() {
   const targetName = target();
   if (!targetName) {
     throw new Error(
-      `unsupported platform ${process.platform}-${process.arch}; ` +
-        `mb supports linux/darwin on x64/arm64`
+      `unsupported platform ${process.platform}-${process.arch}; mb ` +
+        `supports linux-x64, linux-arm64 and darwin-arm64 (the MoonBit ` +
+        `toolchain no longer ships a darwin-x64 target)`
     );
   }
 
