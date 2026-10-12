@@ -316,6 +316,13 @@ pub fn tool_uninstall(spec : String) -> Unit raise MbError {
     rm_rf(tool_dir(t.name, t.version)) catch {
       _ => ()
     }
+    // Drop the per-tool directory once its last version is gone.
+    let name_dir = path_join(tool_root(), tool_key(t.name))
+    if dir_exists(name_dir) && list_dir_unsafe(name_dir).is_empty() {
+      rm_rf(name_dir) catch {
+        _ => ()
+      }
+    }
     println("Uninstalled " + t.name + " " + t.version)
     removed = true
   }
