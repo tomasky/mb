@@ -394,11 +394,9 @@ pub fn remove_shims(version : String) -> Unit raise MbError {
 }
 
 ///|
-/// The `mb moon list` command. Installed toolchains first, then the versions
-/// published on the release channel.
-///
-/// `version.json` only describes the release channel; `nightly` is a moving
-/// pre-release with no published version, so it can only be named.
+/// The `mb moon list` command: installed toolchains, then the versions
+/// published on the release channel (`version.json`, i.e. what `latest`
+/// resolves to).
 pub fn moon_list() -> Unit raise MbError {
   let installed = installed_toolchains()
   let default = default_toolchain()
@@ -432,11 +430,6 @@ pub fn moon_list() -> Unit raise MbError {
       println("  " + pad_right(name, width) + "  " + strip_v(ver))
     }
   }
-  println("")
-  println(
-    "`mb moon install latest` takes the release above; `mb moon install nightly` ",
-  )
-  println("takes the moving pre-release, which has no published version.")
 }
 
 ///|
