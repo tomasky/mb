@@ -12,6 +12,7 @@
   "files": [
     "bin/mb.js",
     "install.js",
+    "lib.js",
     "README.md"
   ],
   "engines": {
