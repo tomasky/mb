@@ -44,10 +44,14 @@ moon build --target native --release
 ```
 mb run [--moon <version>] <command> [args...]
 mb moon list | install [version] | uninstall <version> | default <version> | which [version] | latest
-mb tool install <author>/<module>[@<version>] [--force] [--bin <dir>] [--moon <version>]
-mb tool list | upgrade [module] | uninstall <module>
+mb tool install <author>/<module>[@<version>] [--force] [--bin-dir <dir>] [--moon <version>]
+mb tool list [--outdated] | upgrade [--all] <name>... | uninstall [--all] <name>...
 mb help | version
 ```
+
+Every command and subcommand also understands `-h`/`--help` (which wins over
+any other argument, as in `uv`). `--bin <dir>` is accepted as an alias for
+`--bin-dir <dir>`.
 
 ### Toolchains
 
@@ -96,10 +100,10 @@ selected it falls back to the `moon` already on `PATH`.
 ```bash
 mb tool install bobzhang/zip         # latest version
 mb tool install bobzhang/zip@0.1.1   # pinned version
-mb tool install author/tool --moon 0.10.14 --bin ~/.local/bin
-mb tool list
-mb tool upgrade author/tool
-mb tool uninstall author/tool
+mb tool install author/tool --moon 0.10.14 --bin-dir ~/.local/bin
+mb tool list                         # or: mb tool list --outdated
+mb tool upgrade author/tool          # one or more names, or --all
+mb tool uninstall author/tool        # one or more names, or --all
 ```
 
 `mb tool install`:
@@ -113,9 +117,16 @@ mb tool uninstall author/tool
 5. copies every native executable it produced into `~/.local/bin`.
 
 `mb tool list` prints the tools directory (`$MB_HOME/tool`), and for each tool
-the directory its binaries were installed into and any that are missing.
+the directory its binaries were installed into and any that are missing. With
+`--outdated` it consults mooncakes.io and marks tools that have a newer version.
 `mb tool uninstall` removes the binaries from that same directory, so a tool
-installed with `--bin <dir>` is cleaned up correctly too.
+installed with `--bin <dir>`/`--bin-dir <dir>` is cleaned up correctly too.
+
+`mb tool upgrade` takes one or more names (a version specifier is ignored and
+the latest version is installed) or `--all` for every installed tool; it always
+rebuilds each tool into the directory it was originally installed into. As in
+`uv`, an upgrade or uninstall without any name and without `--all` is a usage
+error.
 
 ## Environment
 
@@ -145,7 +156,7 @@ $MB_HOME/
   `.sha256` checksums) to a GitHub Release when a `v*` tag is pushed:
 
   ```bash
-  git tag v0.1.3 && git push origin v0.1.3
+  git tag v0.1.4 && git push origin v0.1.4
   ```
 
 - `npmjs/` is an npm wrapper. `pnpm install -g @tomasko/mb` downloads the matching

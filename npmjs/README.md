@@ -43,7 +43,7 @@ scripts unless the package is approved, so `postinstall` is skipped and
 
 ```
 npm warn install-scripts 1 package had install scripts blocked because they are not covered by allowScripts:
-npm warn install-scripts   @tomasko/mb@0.1.3 (postinstall: node install.js)
+npm warn install-scripts   @tomasko/mb@0.1.4 (postinstall: node install.js)
 mb: native binary not found at .../node_modules/@tomasko/mb/bin/mb
 ```
 

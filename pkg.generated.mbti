@@ -8,7 +8,7 @@ import {
 // Values
 pub const CLI_BASE : String = "https://cli.moonbitlang.com"
 
-pub const MB_VERSION : String = "0.1.3"
+pub const MB_VERSION : String = "0.1.4"
 
 pub const MOONCAKES_API : String = "https://mooncakes.io"
 
@@ -168,13 +168,15 @@ pub fn tool_dir(String, String) -> String raise MbError
 
 pub fn tool_install(String, String, String, Bool) -> Unit raise MbError
 
-pub fn tool_list() -> Unit raise MbError
+pub fn tool_list(Bool) -> Unit raise MbError
 
 pub fn tool_root() -> String raise MbError
 
 pub fn tool_uninstall(String) -> Unit raise MbError
 
-pub fn tool_upgrade(String, String, String) -> Unit raise MbError
+pub fn tool_uninstall_many(Array[String], Bool) -> Unit raise MbError
+
+pub fn tool_upgrade(Array[String], Bool, String) -> Unit raise MbError
 
 pub fn toolchain_complete(String) -> Bool raise MbError
 
@@ -198,7 +200,7 @@ pub struct MoonSpec {
   store_name : String
 }
 
-pub struct ToolFlags {
+pub struct ToolInstallOpts {
   spec : String
   force : Bool
   bin : String

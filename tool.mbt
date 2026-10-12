@@ -266,8 +266,9 @@ pub fn tool_bin_dir(meta : ToolMeta) -> String raise MbError {
 }
 
 ///|
-/// The `mb tool list` command.
-pub fn tool_list() -> Unit raise MbError {
+/// The `mb tool list` command. With `outdated`, consult mooncakes.io and mark
+/// tools that have a newer version available.
+pub fn tool_list(outdated : Bool) -> Unit raise MbError {
   let tools = installed_tools()
   let root = tool_root()
   if tools.is_empty() {
@@ -276,7 +277,16 @@ pub fn tool_list() -> Unit raise MbError {
   }
   println("Installed tools in " + root + ":")
   for t in tools {
-    println("  " + t.name + " " + t.version)
+    let mut line = "  " + t.name + " " + t.version
+    if outdated {
+      let latest = latest_tool_version(t.name) catch { _ => "" }
+      if latest == "" {
+        line = line + "  (could not check for updates)"
+      } else if latest != t.version {
+        line = line + "  (newer: " + latest + ")"
+      }
+    }
+    println(line)
     let bin = tool_bin_dir(t)
     if t.bins.is_empty() {
       println("    no binaries recorded")
@@ -332,24 +342,43 @@ pub fn tool_uninstall(spec : String) -> Unit raise MbError {
 }
 
 ///|
-/// The `mb tool upgrade [module]` command.
+/// The `mb tool upgrade` command. With `all`, upgrade every installed tool;
+/// otherwise upgrade the named tools (any version specifier is ignored and the
+/// latest version is installed). Each tool is rebuilt into the directory it was
+/// originally installed into.
 pub fn tool_upgrade(
-  spec : String,
+  names : Array[String],
+  all : Bool,
   toolchain_override : String,
-  bin_override : String,
 ) -> Unit raise MbError {
   ensure_tools()
-  let filter = if spec == "" { None } else { Some(fst(split_spec(spec))) }
   let tools = installed_tools()
   if tools.is_empty() {
     println("No tools installed.")
     return
   }
+  let wanted : Array[ToolMeta] = []
   for t in tools {
-    match filter {
-      Some(name) if name != t.name => continue
-      _ => ()
+    let mut pick = all
+    for n in names {
+      if fst(split_spec(n)) == t.name {
+        pick = true
+      }
     }
+    if pick {
+      // One entry per tool name, even when several versions are installed.
+      let mut dup = false
+      for w in wanted {
+        if w.name == t.name {
+          dup = true
+        }
+      }
+      if !dup {
+        wanted.push(t)
+      }
+    }
+  }
+  for t in wanted {
     let latest = latest_tool_version(t.name) catch {
       e => {
         eprintln("warning: could not check " + t.name + ": " + e.message())
@@ -363,13 +392,60 @@ pub fn tool_upgrade(
       tool_install(
         t.name + "@" + latest,
         toolchain_override,
-        bin_override,
+        tool_bin_dir(t),
         true,
       )
       rm_rf(tool_dir(t.name, t.version)) catch {
         _ => ()
       }
     }
+  }
+  // Warn about names that matched no installed tool.
+  for n in names {
+    let name = fst(split_spec(n))
+    let mut found = false
+    for t in tools {
+      if t.name == name {
+        found = true
+      }
+    }
+    if !found {
+      eprintln("warning: '" + name + "' is not installed")
+    }
+  }
+}
+
+///|
+/// The `mb tool uninstall` command: remove the named tools, or every installed
+/// tool with `all`.
+pub fn tool_uninstall_many(
+  specs : Array[String],
+  all : Bool,
+) -> Unit raise MbError {
+  if all {
+    let tools = installed_tools()
+    if tools.is_empty() {
+      println("No tools installed.")
+      return
+    }
+    let done : Array[String] = []
+    for t in tools {
+      let mut seen = false
+      for d in done {
+        if d == t.name {
+          seen = true
+        }
+      }
+      if seen {
+        continue
+      }
+      done.push(t.name)
+      tool_uninstall(t.name)
+    }
+    return
+  }
+  for s in specs {
+    tool_uninstall(s)
   }
 }
 

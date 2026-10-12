@@ -88,24 +88,59 @@ test "json accessors" {
 
 ///|
 test "parse_version_flags" {
-  let (v, f) = parse_version_flags(["0.10.14", "--force"], "latest")
+  let (v, f) = parse_version_flags(["0.10.14", "--force"], "latest").unwrap()
   assert_eq(v, "0.10.14")
   assert_true(f)
-  let (v2, f2) = parse_version_flags([], "latest")
+  let (v2, f2) = parse_version_flags([], "latest").unwrap()
   assert_eq(v2, "latest")
   assert_false(f2)
+  assert_true(parse_version_flags(["--bogus"], "latest") is Err(_))
 }
 
 ///|
-test "parse_tool_flags" {
-  let o = parse_tool_flags(
-    ["bobzhang/zip@0.1.1", "--bin", "/tmp/b", "--moon=latest", "--force"],
-    true,
-  )
+test "parse_tool_install_flags" {
+  let o = parse_tool_install_flags([
+    "bobzhang/zip@0.1.1", "--bin-dir", "/tmp/b", "--moon=latest", "--force",
+  ]).unwrap()
   assert_eq(o.spec, "bobzhang/zip@0.1.1")
   assert_eq(o.bin, "/tmp/b")
   assert_eq(o.moon, "latest")
   assert_true(o.force)
+  // The old --bin spelling still works.
+  let o2 = parse_tool_install_flags(["a/b", "--bin=/tmp/c"]).unwrap()
+  assert_eq(o2.bin, "/tmp/c")
+  // Exactly one package is accepted, and it is required.
+  assert_true(parse_tool_install_flags([]) is Err(_))
+  assert_true(parse_tool_install_flags(["a/b", "c/d"]) is Err(_))
+  assert_true(parse_tool_install_flags(["a/b", "--bogus"]) is Err(_))
+}
+
+///|
+test "parse_names_flags" {
+  let o = parse_names_flags([
+    "author/tool", "b@1.0.0", "--all", "--moon", "0.10.14",
+  ]).unwrap()
+  assert_eq(o.names, ["author/tool", "b@1.0.0"])
+  assert_true(o.all)
+  assert_eq(o.moon, "0.10.14")
+  // uv requires names or --all.
+  assert_true(parse_names_flags([]) is Err(_))
+  assert_true(parse_names_flags(["--moon", "1"]) is Err(_))
+  assert_true(parse_names_flags(["a", "--bogus"]) is Err(_))
+}
+
+///|
+test "parse_list_flags" {
+  assert_false(parse_list_flags([]).unwrap())
+  assert_true(parse_list_flags(["--outdated"]).unwrap())
+  assert_true(parse_list_flags(["--outdated", "x"]) is Err(_))
+}
+
+///|
+test "parse_required_arg" {
+  assert_eq(parse_required_arg(["0.10.14"], "<VERSION>").unwrap(), "0.10.14")
+  assert_true(parse_required_arg([], "<VERSION>") is Err(_))
+  assert_true(parse_required_arg(["a", "b"], "<VERSION>") is Err(_))
 }
 
 ///|
