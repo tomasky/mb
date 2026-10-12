@@ -28,6 +28,12 @@ jobs:
       - name: moon version
         run: moon version
 
+      # A fresh runner has an empty registry index, so dependencies
+      # (moonbitlang/x, bobzhang/zip, ...) cannot be resolved until the index
+      # is fetched.
+      - name: Update registry index
+        run: moon update
+
       - name: Check
         run: moon check
 
