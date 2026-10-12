@@ -52,11 +52,18 @@ jobs:
           cp _build/native/release/build/cmd/mb/mb.exe "dist/mb-${{ matrix.target }}"
           chmod +x "dist/mb-${{ matrix.target }}"
           file "dist/mb-${{ matrix.target }}" || true
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd dist && sha256sum "mb-${{ matrix.target }}" > "mb-${{ matrix.target }}.sha256")
+          else
+            (cd dist && shasum -a 256 "mb-${{ matrix.target }}" > "mb-${{ matrix.target }}.sha256")
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: mb-${{ matrix.target }}
-          path: dist/mb-${{ matrix.target }}
+          path: |
+            dist/mb-${{ matrix.target }}
+            dist/mb-${{ matrix.target }}.sha256
           if-no-files-found: error
 
   release:

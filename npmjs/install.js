@@ -38,7 +38,7 @@ function downloadUrl(targetName) {
   if (process.env.MB_DOWNLOAD_BASE) {
     return `${process.env.MB_DOWNLOAD_BASE.replace(/\/$/, "")}/mb-${targetName}`;
   }
-  const repo = process.env.MB_REPO || repoSlug(pkg.repository) || "kupas/mb";
+  const repo = process.env.MB_REPO || repoSlug(pkg.repository) || "tomasky/mb";
   const version = process.env.MB_VERSION || pkg.version;
   return `https://github.com/${repo}/releases/download/v${version}/mb-${targetName}`;
 }

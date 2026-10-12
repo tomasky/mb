@@ -14,6 +14,22 @@ manage Python:
 Everything installs to `~/.local/bin` by default. Only Linux and macOS
 (including Apple Silicon) are supported.
 
+## Install
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/tomasky/mb/main/install.sh | bash
+```
+
+Or with npm:
+
+```bash
+npm install -g mb
+```
+
+Both download the prebuilt binary from
+[GitHub Releases](https://github.com/tomasky/mb/releases) for the current
+platform. See [Build](#build) to compile from source.
+
 ## Build
 
 ```bash
@@ -122,9 +138,20 @@ $MB_HOME/
   cd npmjs && npm publish --access public
   ```
 
-  Publishing to mooncakes.io ignores this directory: `.moonignore` at the
-  repository root excludes `npmjs/` (and build/editor junk) from the package
-  that `moon publish` uploads.
+- `install.sh` is the `curl | bash` installer:
+
+  ```bash
+  curl -LsSf https://raw.githubusercontent.com/tomasky/mb/main/install.sh | bash
+  ```
+
+  It detects the platform, downloads `mb-<target>` (plus its `.sha256`) from
+  the latest release and installs it into `~/.local/bin`. Options: `--version
+  <v>`, `--install-dir <dir>`, `--no-verify`; environment: `MB_VERSION`,
+  `MB_INSTALL_DIR`, `MB_REPO`, `MB_DOWNLOAD_BASE`.
+
+  Publishing to mooncakes.io ignores `npmjs/`: `.moonignore` at the
+  repository root excludes it (and build/editor junk) from the package that
+  `moon publish` uploads.
 
 ## Development
 
@@ -134,5 +161,6 @@ moon test           # run the test suite
 moon info && moon fmt
 ```
 
-The public library API lives in the root package (`kupas/mb`); the CLI entry
-point is `cmd/mb`.
+The public library API lives in the root package (`kupas/mb`, the mooncakes.io
+module name); the CLI entry point is `cmd/mb`. The GitHub repository is
+`tomasky/mb`.

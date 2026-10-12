@@ -15,15 +15,15 @@ version = "0.1.1"
 
 readme = "README.mbt.md"
 
-repository = ""
+repository = "https://github.com/tomasky/mb"
 
 license = "Apache-2.0"
 
-keywords = [ ]
+keywords = [ "moonbit", "package-manager", "toolchain", "cli", "uv" ]
 
 preferred_target = "native"
 
-description = ""
+description = "A MoonBit-native, uv-style toolchain and package manager: manage MoonBit toolchains and install tools from mooncakes.io."
 
 import {
   "moonbitlang/x@0.5.5",

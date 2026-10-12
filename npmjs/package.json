@@ -27,10 +27,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/kupas/mb.git"
+    "url": "https://github.com/tomasky/mb.git"
   },
-  "homepage": "https://github.com/kupas/mb",
-  "bugs": "https://github.com/kupas/mb/issues",
+  "homepage": "https://github.com/tomasky/mb",
+  "bugs": "https://github.com/tomasky/mb/issues",
   "keywords": [
     "moonbit",
     "mooncakes",
