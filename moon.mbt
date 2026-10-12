@@ -44,7 +44,8 @@ pub fn parse_version_items(j : Json) -> Array[(String, String)] {
     Some(items) =>
       for item in items {
         match (json_string(item, "name"), json_string(item, "version")) {
-          (Some(name), Some(ver)) => out.push((name, first_token(ver)))
+          (Some(name), Some(ver)) =>
+            out.push((name, first_token(strip_name_prefix(ver, name))))
           _ => ()
         }
       }
@@ -54,11 +55,44 @@ pub fn parse_version_items(j : Json) -> Array[(String, String)] {
 }
 
 ///|
+/// Some entries repeat the tool name in their version string, e.g.
+/// `moonrun 0.1.20261012 (748b63c ...)`.
+fn strip_name_prefix(ver : String, name : String) -> String {
+  let prefix = name + " "
+  if ver.has_prefix(prefix) {
+    ver[prefix.length():].to_owned()
+  } else {
+    ver
+  }
+}
+
+///|
 fn first_token(s : String) -> String {
   match s.find(" ") {
     Some(i) => s[:i].to_owned()
     None => s
   }
+}
+
+///|
+/// Drop a leading `v` (version strings are published as `v0.10.15+943464bfa`
+/// but stored and passed around without it).
+fn strip_v(s : String) -> String {
+  if s.has_prefix("v") {
+    s[1:].to_owned()
+  } else {
+    s
+  }
+}
+
+///|
+/// Right-pad `s` with spaces to `width` (no-op when already wider).
+fn pad_right(s : String, width : Int) -> String {
+  let mut out = s
+  while out.length() < width {
+    out = out + " "
+  }
+  out
 }
 
 ///|
@@ -80,8 +114,7 @@ pub fn latest_moonc_version() -> String? raise MbError {
   let j = fetch_json(CLI_BASE + "/version.json")
   for (name, ver) in parse_version_items(j) {
     if name == "moonc" {
-      let stripped = if ver.has_prefix("v") { ver[1:].to_owned() } else { ver }
-      return Some(stripped)
+      return Some(strip_v(ver))
     }
   }
   None
@@ -258,6 +291,17 @@ pub fn moon_install(arg : String, force : Bool) -> Unit raise MbError {
     shell_quote(moon) +
     " bundle --warn-list -a --all",
   )
+  // Nightly also ships an llvm-target core; releases do not.
+  if spec.download_key == "nightly" {
+    run_checked(
+      "cd " +
+      shell_quote(core_dir) +
+      " && " +
+      prefix +
+      shell_quote(moon) +
+      " bundle --warn-list -a --target llvm",
+    )
+  }
   run_checked(
     "cd " +
     shell_quote(core_dir) +
@@ -305,7 +349,56 @@ pub fn ensure_shims(version : String) -> Unit raise MbError {
 }
 
 ///|
-/// The `mb moon list` command.
+/// Target of a symlink, or `None` when `path` is not a symlink. Works for
+/// dangling links too, which is exactly the case that needs cleaning up.
+pub fn readlink(path : String) -> String? {
+  let out = run_capture("readlink " + shell_quote(path) + " 2>/dev/null")
+  let target = out.trim().to_owned()
+  if target == "" {
+    None
+  } else {
+    Some(target)
+  }
+}
+
+///|
+/// Whether a shim symlink target lives inside `dir`'s `bin` directory.
+pub fn shim_points_into(target : String, dir : String) -> Bool {
+  target.has_prefix(dir + "/bin/")
+}
+
+///|
+fn remove_shims_in(bin : String, dir : String) -> Unit {
+  if !dir_exists(bin) {
+    return
+  }
+  for name in list_dir_unsafe(bin) {
+    let link = path_join(bin, name)
+    match readlink(link) {
+      Some(target) =>
+        if shim_points_into(target, dir) {
+          run_ok("rm -f -- " + shell_quote(link)) |> ignore
+        }
+      None => ()
+    }
+  }
+}
+
+///|
+/// Remove the `~/.local/bin` symlinks pointing into `version`'s toolchain.
+///
+/// Match by symlink target rather than by the recorded default, so an
+/// uninstalled version never leaves dangling `moon`/`moonc`/... links behind.
+pub fn remove_shims(version : String) -> Unit raise MbError {
+  remove_shims_in(bin_dir(), toolchain_dir(version))
+}
+
+///|
+/// The `mb moon list` command. Installed toolchains first, then the versions
+/// published on the release channel.
+///
+/// `version.json` only describes the release channel; `nightly` is a moving
+/// pre-release with no published version, so it can only be named.
 pub fn moon_list() -> Unit raise MbError {
   let installed = installed_toolchains()
   let default = default_toolchain()
@@ -321,16 +414,29 @@ pub fn moon_list() -> Unit raise MbError {
       println("  " + v + marker)
     }
   }
-  let latest = latest_moon_cli_version() catch { _ => None }
-  let moonc = latest_moonc_version() catch { _ => None }
-  match latest {
-    Some(v) => println("\nLatest available: " + v)
-    None => ()
+  let items = parse_version_items(fetch_json(CLI_BASE + "/version.json")) catch {
+    _ => []
   }
-  match moonc {
-    Some(v) => println("Latest compiler:  " + v)
-    None => ()
+  println("")
+  if items.is_empty() {
+    println("Release channel: unavailable")
+  } else {
+    let mut width = 0
+    for (name, _) in items {
+      if name.length() > width {
+        width = name.length()
+      }
+    }
+    println("Release channel (version.json):")
+    for (name, ver) in items {
+      println("  " + pad_right(name, width) + "  " + strip_v(ver))
+    }
   }
+  println("")
+  println(
+    "`mb moon install latest` takes the release above; `mb moon install nightly` ",
+  )
+  println("takes the moving pre-release, which has no published version.")
 }
 
 ///|
@@ -338,6 +444,9 @@ pub fn moon_list() -> Unit raise MbError {
 pub fn moon_uninstall(version : String) -> Unit raise MbError {
   match find_installed_toolchain(version) {
     Some(v) => {
+      // Drop the `~/.local/bin` shims before the toolchain directory goes
+      // away, otherwise they are left dangling.
+      remove_shims(v)
       rm_rf(toolchain_dir(v))
       println("Uninstalled MoonBit toolchain " + v)
       match default_toolchain() {

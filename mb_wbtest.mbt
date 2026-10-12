@@ -47,12 +47,14 @@ test "urlencode_plus" {
 ///|
 test "parse_version_items" {
   let j = @json.parse(
-    "{\"items\":[{\"name\":\"moon\",\"version\":\"0.1.20260920 (914d7da 2026-09-20)\"},{\"name\":\"moonc\",\"version\":\"v0.10.14+7d59c7ec9 (2026-09-18)\"}]}",
+    "{\"items\":[{\"name\":\"moon\",\"version\":\"0.1.20260920 (914d7da 2026-09-20)\"},{\"name\":\"moonc\",\"version\":\"v0.10.14+7d59c7ec9 (2026-09-18)\"},{\"name\":\"moonrun\",\"version\":\"moonrun 0.1.20260920 (914d7da 2026-09-20)\"}]}",
   )
   let items = parse_version_items(j)
-  assert_eq(items.length(), 2)
+  assert_eq(items.length(), 3)
   assert_eq(items[0], ("moon", "0.1.20260920"))
   assert_eq(items[1], ("moonc", "v0.10.14+7d59c7ec9"))
+  // The tool name may be repeated in the version string.
+  assert_eq(items[2], ("moonrun", "0.1.20260920"))
 }
 
 ///|
@@ -104,4 +106,66 @@ test "parse_tool_flags" {
   assert_eq(o.bin, "/tmp/b")
   assert_eq(o.moon, "latest")
   assert_true(o.force)
+}
+
+///|
+test "strip_v and pad_right" {
+  assert_eq(strip_v("v0.10.15+943464bfa"), "0.10.15+943464bfa")
+  assert_eq(strip_v("0.1.20261012"), "0.1.20261012")
+  assert_eq(pad_right("moon", 7), "moon   ")
+  assert_eq(pad_right("moonrun", 7), "moonrun")
+}
+
+///|
+test "shim_points_into" {
+  assert_true(shim_points_into("/h/moon/1.2.3/bin/moon", "/h/moon/1.2.3"))
+  assert_false(shim_points_into("/h/moon/1.2.3/binx/moon", "/h/moon/1.2.3"))
+  assert_false(shim_points_into("/h/moon/1.2.4/bin/moon", "/h/moon/1.2.3"))
+  assert_false(shim_points_into("/usr/bin/moon", "/h/moon/1.2.3"))
+}
+
+///|
+test "readlink" {
+  let root = temp_path() + ".d"
+  let link = path_join(root, "link")
+  let plain = path_join(root, "plain")
+  mkdir_p(root)
+  write_text(plain, "x")
+  ignore(run_ok("ln -sfn /some/target " + shell_quote(link)))
+  assert_eq(readlink(link), Some("/some/target"))
+  // Dangling links still resolve, plain files do not.
+  assert_eq(readlink(path_join(root, "missing")), None)
+  assert_eq(readlink(plain), None)
+  rm_rf(root)
+}
+
+///|
+test "remove_shims_in only removes links into the toolchain" {
+  let root = temp_path() + ".d"
+  let bin = path_join(root, "bin")
+  let tc = path_join(root, "moon/1.2.3")
+  let tbin = path_join(tc, "bin")
+  mkdir_p(tbin)
+  mkdir_p(bin)
+  write_text(path_join(tbin, "moon"), "#!/bin/sh\n")
+  write_text(path_join(tbin, "moonc"), "#!/bin/sh\n")
+  for name in ["moon", "moonc"] {
+    ignore(
+      run_ok(
+        "ln -sfn " +
+        shell_quote(path_join(tbin, name)) +
+        " " +
+        shell_quote(path_join(bin, name)),
+      ),
+    )
+  }
+  // A link pointing elsewhere and a regular file must survive.
+  ignore(run_ok("ln -sfn /usr/bin/env " + shell_quote(path_join(bin, "env"))))
+  write_text(path_join(bin, "keep"), "x")
+  remove_shims_in(bin, tc)
+  assert_false(path_exists(path_join(bin, "moon")))
+  assert_false(path_exists(path_join(bin, "moonc")))
+  assert_true(path_exists(path_join(bin, "env")))
+  assert_true(path_exists(path_join(bin, "keep")))
+  rm_rf(root)
 }

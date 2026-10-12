@@ -55,10 +55,23 @@ mb help | version
 mb moon install              # install the latest release
 mb moon install 0.10.14      # install the release with moonc 0.10.14
 mb moon install nightly      # install the nightly build
-mb moon list                 # installed + available versions
+mb moon list                 # installed toolchains + the release channel
 mb moon default 0.10.14      # select the version ~/.local/bin points at
 mb moon which                # print the active moon binary
+mb moon uninstall 0.10.14    # remove a toolchain and its ~/.local/bin shims
 ```
+
+`mb moon list` first lists the installed toolchains, then the versions
+published on the **release** channel (`cli.moonbitlang.com/version.json`, i.e.
+what `latest` resolves to). `nightly` is a separate, moving pre-release with
+no published version, so it can only be named — `mb moon list` says so
+explicitly rather than reporting it as a release.
+
+Toolchains live under `$MB_HOME/moon/<version>` and the `moon`, `moonc`,
+`moonfmt`, ... binaries are symlinked into `~/.local/bin`. Uninstalling a
+toolchain removes those symlinks too (it matches them by target, so nothing is
+left dangling), and re-points them at another installed toolchain when one is
+available.
 
 Toolchains live under `$MB_HOME/moon/<version>` and the `moon`, `moonc`,
 `moonfmt`, ... binaries are symlinked into `~/.local/bin`. Installing a

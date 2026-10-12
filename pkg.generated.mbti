@@ -128,6 +128,10 @@ pub fn read_bytes(String) -> Bytes raise MbError
 
 pub fn read_text(String) -> String raise MbError
 
+pub fn readlink(String) -> String?
+
+pub fn remove_shims(String) -> Unit raise MbError
+
 pub fn resolve_moon_spec(String) -> MoonSpec raise MbError
 
 pub fn resolve_toolchain(String) -> ToolchainEnv raise MbError
@@ -149,6 +153,8 @@ pub fn set_default_toolchain(String) -> Unit raise MbError
 pub fn sha256_hex(Bytes) -> String
 
 pub fn shell_quote(String) -> String
+
+pub fn shim_points_into(String, String) -> Bool
 
 pub fn sync_default_shims() -> Unit raise MbError
 

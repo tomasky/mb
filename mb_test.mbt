@@ -29,3 +29,9 @@ test "public json accessors" {
   assert_eq(@mb.json_string(j, "version"), Some("0.5.5"))
   assert_eq(@mb.json_string(j, "missing"), None)
 }
+
+///|
+test "public shim_points_into" {
+  assert_true(@mb.shim_points_into("/h/moon/1/bin/moon", "/h/moon/1"))
+  assert_false(@mb.shim_points_into("/h/moon/1/bin/moon", "/h/moon/2"))
+}
