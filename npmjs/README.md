@@ -35,21 +35,33 @@ ships a `darwin-x86_64` target, so no such build can be produced.
 Assets are produced by `.github/workflows/release.yml` when a `v*` tag is
 pushed.
 
-## pnpm
+## Install scripts are blocked by default
 
-pnpm 10+ does **not** run a dependency's install scripts unless the package is
-approved, so `postinstall` is skipped and `bin/mb` is missing right after
-install. Nothing breaks: `bin/mb.js` downloads the binary on first run.
+Recent npm (12+) and pnpm (10+) versions do **not** run a dependency's install
+scripts unless the package is approved, so `postinstall` is skipped and
+`bin/mb` is missing right after install:
 
-To have it downloaded at install time instead, approve the build once:
-
-```bash
-pnpm approve-builds
-# or, in the consuming project's package.json:
-#   "pnpm": { "onlyBuiltDependencies": ["@tomasko/mb"] }
+```
+npm warn install-scripts 1 package had install scripts blocked because they are not covered by allowScripts:
+npm warn install-scripts   @tomasko/mb@0.1.1 (postinstall: node install.js)
+mb: native binary not found at .../node_modules/@tomasko/mb/bin/mb
 ```
 
-Either way, `pnpm rebuild @tomasko/mb` re-runs the download.
+Nothing is broken: `bin/mb.js` downloads the binary on first run. To have it
+downloaded at install time instead, approve the build once:
+
+```bash
+npm install-scripts approve @tomasko/mb   # npm 12+ (writes `allowScripts`)
+pnpm approve-builds                       # pnpm 10+
+```
+
+Either way, re-run the download manually with:
+
+```bash
+npm rebuild @tomasko/mb
+# or
+pnpm rebuild @tomasko/mb
+```
 
 ## Overrides
 
