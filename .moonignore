@@ -1,0 +1,14 @@
+# Controls which files are uploaded to mooncakes.io.
+#
+# `.moonignore` overrides `.gitignore` for packaging, so entries that matter
+# for publishes must be repeated here. Notably `npmjs/` is the npm wrapper and
+# must *not* be shipped to mooncakes.io.
+.DS_Store
+_build/
+target/
+target
+.mooncakes/
+.moonagent/
+npmjs/
+.github/
+.githooks/

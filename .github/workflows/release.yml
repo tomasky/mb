@@ -1,0 +1,79 @@
+name: release
+
+# Builds `mb` for every supported target and attaches the binaries to a
+# GitHub Release. The npm package in `npmjs/` downloads these assets.
+#
+#   git tag v0.1.1 && git push origin v0.1.1
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: linux-x86_64
+          # GitHub's arm64 Linux runners are only available to public
+          # repositories; drop this entry (and the MB target support for it)
+          # if that is a problem.
+          - runner: ubuntu-24.04-arm
+            target: linux-aarch64
+          - runner: macos-14
+            target: darwin-aarch64
+          - runner: macos-13
+            target: darwin-x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: moon version
+        run: moon version
+
+      - name: Build (native, release)
+        run: moon build --target native --release
+
+      - name: Stage binary
+        run: |
+          mkdir -p dist
+          cp _build/native/release/build/cmd/mb/mb.exe "dist/mb-${{ matrix.target }}"
+          chmod +x "dist/mb-${{ matrix.target }}"
+          file "dist/mb-${{ matrix.target }}" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mb-${{ matrix.target }}
+          path: dist/mb-${{ matrix.target }}
+          if-no-files-found: error
+
+  release:
+    name: publish GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List assets
+        run: ls -l dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

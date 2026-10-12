@@ -1,0 +1,42 @@
+{
+  "name": "mb",
+  "version": "0.1.1",
+  "description": "A MoonBit-native, uv-style toolchain and package manager: manage MoonBit toolchains and install tools from mooncakes.io.",
+  "license": "Apache-2.0",
+  "bin": {
+    "mb": "bin/mb.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "bin/mb.js",
+    "install.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kupas/mb.git"
+  },
+  "homepage": "https://github.com/kupas/mb",
+  "bugs": "https://github.com/kupas/mb/issues",
+  "keywords": [
+    "moonbit",
+    "mooncakes",
+    "toolchain",
+    "package-manager",
+    "uv"
+  ],
+  "preferGlobal": true
+}

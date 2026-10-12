@@ -102,6 +102,30 @@ $MB_HOME/
     tool.json              # { name, version, bins }
 ```
 
+## Releases, CI and npm
+
+- `.github/workflows/ci.yml` runs `moon check`, `moon test` and a native
+  release build on Linux and macOS.
+- `.github/workflows/release.yml` builds `mb` for `linux-x86_64`,
+  `linux-aarch64`, `darwin-aarch64` and `darwin-x86_64` and attaches the
+  binaries to a GitHub Release when a `v*` tag is pushed:
+
+  ```bash
+  git tag v0.1.1 && git push origin v0.1.1
+  ```
+
+- `npmjs/` is an npm wrapper. `npm install -g mb` downloads the matching
+  release asset and exposes the `mb` command. It is published separately to
+  npm:
+
+  ```bash
+  cd npmjs && npm publish --access public
+  ```
+
+  Publishing to mooncakes.io ignores this directory: `.moonignore` at the
+  repository root excludes `npmjs/` (and build/editor junk) from the package
+  that `moon publish` uploads.
+
 ## Development
 
 ```bash
