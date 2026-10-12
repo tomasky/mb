@@ -4,7 +4,7 @@ npm wrapper for [`mb`](../../README.md) — a MoonBit-native, uv-style toolchain
 and package manager.
 
 ```bash
-npm install -g mb
+pnpm install -g @tomasko/mb
 mb --help
 mb moon install 0.10.14
 mb tool install bobzhang/zip

@@ -25,7 +25,7 @@ curl -LsSf https://raw.githubusercontent.com/tomasky/mb/main/install.sh | bash
 Or with npm:
 
 ```bash
-npm install -g mb
+pnpm install -g @tomasko/mb
 ```
 
 Both download the prebuilt binary from
@@ -132,7 +132,7 @@ $MB_HOME/
   git tag v0.1.1 && git push origin v0.1.1
   ```
 
-- `npmjs/` is an npm wrapper. `npm install -g mb` downloads the matching
+- `npmjs/` is an npm wrapper. `pnpm install -g @tomasko/mb` downloads the matching
   release asset and exposes the `mb` command. It is published separately to
   npm:
 

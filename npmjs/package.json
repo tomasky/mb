@@ -1,5 +1,5 @@
 {
-  "name": "mb",
+  "name": "@tomasko/mb",
   "version": "0.1.1",
   "description": "A MoonBit-native, uv-style toolchain and package manager: manage MoonBit toolchains and install tools from mooncakes.io.",
   "license": "Apache-2.0",
@@ -15,7 +15,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "os": [
     "darwin",
