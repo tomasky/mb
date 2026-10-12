@@ -8,7 +8,7 @@ import {
 // Values
 pub const CLI_BASE : String = "https://cli.moonbitlang.com"
 
-pub const MB_VERSION : String = "0.1.1"
+pub const MB_VERSION : String = "0.1.3"
 
 pub const MOONCAKES_API : String = "https://mooncakes.io"
 

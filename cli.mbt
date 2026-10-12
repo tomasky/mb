@@ -2,7 +2,7 @@
 /// Command-line parsing and dispatch for `mb`.
 
 ///|
-pub const MB_VERSION : String = "0.1.1"
+pub const MB_VERSION : String = "0.1.3"
 
 ///|
 fn tail(a : Array[String], from : Int) -> Array[String] {

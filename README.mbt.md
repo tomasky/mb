@@ -140,7 +140,7 @@ $MB_HOME/
   `.sha256` checksums) to a GitHub Release when a `v*` tag is pushed:
 
   ```bash
-  git tag v0.1.1 && git push origin v0.1.1
+  git tag v0.1.3 && git push origin v0.1.3
   ```
 
 - `npmjs/` is an npm wrapper. `pnpm install -g @tomasko/mb` downloads the matching
