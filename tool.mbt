@@ -13,11 +13,14 @@ pub const MOONCAKES_API : String = "https://mooncakes.io"
 pub const MOONCAKES_DOWNLOAD : String = "https://download.mooncakes.io"
 
 ///|
-/// Persisted metadata for one installed tool version.
+/// Persisted metadata for one installed tool version. `bin` records where the
+/// executables were copied; it is optional because records written before it
+/// existed only have `bins`.
 pub struct ToolMeta {
   name : String
   version : String
   bins : Array[String]
+  bin : String?
 } derive(ToJson, FromJson)
 
 ///|
@@ -207,7 +210,12 @@ pub fn tool_install(
     installed.push(tool_name)
     println("  installed " + dest)
   }
-  let record : ToolMeta = { name: resolved_name, version, bins: installed, }
+  let record : ToolMeta = {
+    name: resolved_name,
+    version,
+    bins: installed,
+    bin: Some(bin_dir),
+  }
   write_text(
     path_join(dir, "tool.json"),
     @json.to_json(record).stringify(indent=2),
@@ -248,16 +256,40 @@ pub fn installed_tools() -> Array[ToolMeta] raise MbError {
 }
 
 ///|
+/// Where a tool's executables live: its recorded install directory, or the
+/// current default for records written before that was tracked.
+pub fn tool_bin_dir(meta : ToolMeta) -> String raise MbError {
+  match meta.bin {
+    Some(b) => b
+    None => bin_dir()
+  }
+}
+
+///|
 /// The `mb tool list` command.
 pub fn tool_list() -> Unit raise MbError {
   let tools = installed_tools()
+  let root = tool_root()
   if tools.is_empty() {
-    println("No tools installed.")
+    println("No tools installed (looked in " + root + ").")
     return
   }
-  println("Installed tools:")
+  println("Installed tools in " + root + ":")
   for t in tools {
-    println("  " + t.name + " " + t.version + " (" + t.bins.join(", ") + ")")
+    println("  " + t.name + " " + t.version)
+    let bin = tool_bin_dir(t)
+    if t.bins.is_empty() {
+      println("    no binaries recorded")
+    } else {
+      let entries = t.bins.map(b => {
+        if file_exists(path_join(bin, b)) {
+          b
+        } else {
+          b + " (missing)"
+        }
+      })
+      println("    " + entries.join(", ") + "  in " + bin)
+    }
   }
 }
 
@@ -266,7 +298,6 @@ pub fn tool_list() -> Unit raise MbError {
 pub fn tool_uninstall(spec : String) -> Unit raise MbError {
   let (name, requested) = split_spec(spec)
   let tools = installed_tools()
-  let bin = bin_dir()
   let mut removed = false
   for t in tools {
     if t.name != name {
@@ -275,6 +306,8 @@ pub fn tool_uninstall(spec : String) -> Unit raise MbError {
     if requested is Some(v) && v != t.version {
       continue
     }
+    // Remove from the directory the tool was actually installed into.
+    let bin = tool_bin_dir(t)
     for b in t.bins {
       rm_rf(path_join(bin, b)) catch {
         _ => ()

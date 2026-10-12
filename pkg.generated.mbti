@@ -162,6 +162,8 @@ pub fn system_toolchain() -> ToolchainEnv?
 
 pub fn temp_path() -> String raise MbError
 
+pub fn tool_bin_dir(ToolMeta) -> String raise MbError
+
 pub fn tool_dir(String, String) -> String raise MbError
 
 pub fn tool_install(String, String, String, Bool) -> Unit raise MbError
@@ -207,6 +209,7 @@ pub struct ToolMeta {
   name : String
   version : String
   bins : Array[String]
+  bin : String?
 } derive(ToJson, @json.FromJson)
 pub fn ToolMeta::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ToolMeta::to_json(Self) -> Json

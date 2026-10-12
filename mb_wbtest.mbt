@@ -169,3 +169,26 @@ test "remove_shims_in only removes links into the toolchain" {
   assert_true(path_exists(path_join(bin, "keep")))
   rm_rf(root)
 }
+
+///|
+test "ToolMeta json: legacy records without `bin` still parse" {
+  let legacy : ToolMeta = @json.from_json(
+    @json.parse(
+      "{\"name\":\"bobzhang/zip\",\"version\":\"0.1.1\",\"bins\":[\"main\"]}",
+    ),
+  )
+  assert_eq(legacy.name, "bobzhang/zip")
+  assert_eq(legacy.version, "0.1.1")
+  assert_eq(legacy.bins, ["main"])
+  assert_eq(legacy.bin, None)
+  let round : ToolMeta = @json.from_json(
+    @json.to_json({
+      name: "a/b",
+      version: "2.0.0",
+      bins: ["x", "y"],
+      bin: Some("/opt/bin"),
+    }),
+  )
+  assert_eq(round.bin, Some("/opt/bin"))
+  assert_eq(round.bins, ["x", "y"])
+}

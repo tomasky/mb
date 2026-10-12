@@ -112,6 +112,11 @@ mb tool uninstall author/tool
    `moon build --target native --release`;
 5. copies every native executable it produced into `~/.local/bin`.
 
+`mb tool list` prints the tools directory (`$MB_HOME/tool`), and for each tool
+the directory its binaries were installed into and any that are missing.
+`mb tool uninstall` removes the binaries from that same directory, so a tool
+installed with `--bin <dir>` is cleaned up correctly too.
+
 ## Environment
 
 | Variable         | Meaning                                              | Default             |
@@ -128,7 +133,7 @@ $MB_HOME/
   moon/.default            # the selected version
   tool/<author>-<name>/<version>/
     src/                   # extracted mooncakes source
-    tool.json              # { name, version, bins }
+    tool.json              # { name, version, bins, bin }
 ```
 
 ## Releases, CI and npm
