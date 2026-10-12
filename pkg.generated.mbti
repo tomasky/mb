@@ -1,0 +1,216 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "kupas/mb"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+pub const CLI_BASE : String = "https://cli.moonbitlang.com"
+
+pub const MB_VERSION : String = "0.1.1"
+
+pub const MOONCAKES_API : String = "https://mooncakes.io"
+
+pub const MOONCAKES_DOWNLOAD : String = "https://download.mooncakes.io"
+
+pub fn base_name(String) -> String
+
+pub fn bin_dir() -> String raise MbError
+
+pub fn build_tool(String, ToolchainEnv) -> Array[(String, String)] raise MbError
+
+pub fn chmod_exec(String) -> Unit
+
+pub fn cmd_run(String, Array[String]) -> Int raise MbError
+
+pub fn copy_file(String, String) -> Unit raise MbError
+
+pub fn cstring(String) -> Bytes
+
+pub fn default_toolchain() -> String? raise MbError
+
+pub fn dir_exists(String) -> Bool
+
+pub fn discover_binaries(String) -> Array[(String, String)] raise MbError
+
+pub fn download(String, String, Bool) -> Unit raise MbError
+
+pub fn effective_toolchain() -> String? raise MbError
+
+pub fn ensure_shims(String) -> Unit raise MbError
+
+pub fn ensure_tools() -> Unit raise MbError
+
+pub fn env_or(String, String) -> String
+
+pub fn env_prefix(ToolchainEnv) -> String
+
+pub fn exit(Int) -> Unit
+
+pub fn extract_tar_gz(String, String) -> Unit raise MbError
+
+pub fn extract_zip(Bytes, String) -> Unit raise MbError
+
+pub fn fail(String) -> Unit raise MbError
+
+pub fn fetch_bytes(String) -> Bytes raise MbError
+
+pub fn fetch_json(String) -> Json raise MbError
+
+pub fn fetch_manifest(String, String?) -> Json raise MbError
+
+pub fn fetch_text(String) -> String raise MbError
+
+pub fn file_exists(String) -> Bool
+
+pub fn find_installed_toolchain(String) -> String? raise MbError
+
+pub fn home_dir() -> String raise MbError
+
+pub fn installed_toolchains() -> Array[String] raise MbError
+
+pub fn installed_tools() -> Array[ToolMeta] raise MbError
+
+pub fn is_executable_file(String) -> Bool
+
+pub fn is_tty() -> Bool
+
+pub fn json_array(Json, String) -> Array[Json]?
+
+pub fn json_bool(Json, String) -> Bool?
+
+pub fn json_field(Json, String) -> Json?
+
+pub fn json_object(Json, String) -> Json?
+
+pub fn json_string(Json, String) -> String?
+
+pub fn latest_moon_cli_version() -> String? raise MbError
+
+pub fn latest_moonc_version() -> String? raise MbError
+
+pub fn latest_tool_version(String) -> String raise MbError
+
+pub fn list_dir(String) -> Array[String] raise MbError
+
+pub fn list_dir_unsafe(String) -> Array[String]
+
+pub fn mb_home() -> String raise MbError
+
+pub fn mkdir_p(String) -> Unit raise MbError
+
+pub fn moon_install(String, Bool) -> Unit raise MbError
+
+pub fn moon_list() -> Unit raise MbError
+
+pub fn moon_root() -> String raise MbError
+
+pub fn moon_set_default(String) -> Unit raise MbError
+
+pub fn moon_uninstall(String) -> Unit raise MbError
+
+pub fn moon_which(String) -> Unit raise MbError
+
+pub fn parent_dir(String) -> String
+
+pub fn parse_version_items(Json) -> Array[(String, String)]
+
+pub fn path_exists(String) -> Bool
+
+pub fn path_join(String, String) -> String
+
+pub fn path_join_all(Array[String]) -> String
+
+pub fn platform() -> String raise MbError
+
+pub fn read_bytes(String) -> Bytes raise MbError
+
+pub fn read_text(String) -> String raise MbError
+
+pub fn resolve_moon_spec(String) -> MoonSpec raise MbError
+
+pub fn resolve_toolchain(String) -> ToolchainEnv raise MbError
+
+pub fn rm_rf(String) -> Unit raise MbError
+
+pub fn run_capture(String) -> String
+
+pub fn run_checked(String) -> Unit raise MbError
+
+pub fn run_cli(Array[String]) -> Int raise MbError
+
+pub fn run_ok(String) -> Bool
+
+pub fn run_status(String) -> Int
+
+pub fn set_default_toolchain(String) -> Unit raise MbError
+
+pub fn sha256_hex(Bytes) -> String
+
+pub fn shell_quote(String) -> String
+
+pub fn sync_default_shims() -> Unit raise MbError
+
+pub fn system_toolchain() -> ToolchainEnv?
+
+pub fn temp_path() -> String raise MbError
+
+pub fn tool_dir(String, String) -> String raise MbError
+
+pub fn tool_install(String, String, String, Bool) -> Unit raise MbError
+
+pub fn tool_list() -> Unit raise MbError
+
+pub fn tool_root() -> String raise MbError
+
+pub fn tool_uninstall(String) -> Unit raise MbError
+
+pub fn tool_upgrade(String, String, String) -> Unit raise MbError
+
+pub fn toolchain_complete(String) -> Bool raise MbError
+
+pub fn toolchain_dir(String) -> String raise MbError
+
+pub fn walk_files(String) -> Array[String] raise MbError
+
+pub fn write_bytes(String, Bytes) -> Unit raise MbError
+
+pub fn write_text(String, String) -> Unit raise MbError
+
+// Errors
+pub(all) suberror MbError {
+  MbError(String)
+}
+pub fn MbError::message(Self) -> String
+
+// Types and methods
+pub struct MoonSpec {
+  download_key : String
+  store_name : String
+}
+
+pub struct ToolFlags {
+  spec : String
+  force : Bool
+  bin : String
+  moon : String
+}
+
+pub struct ToolMeta {
+  name : String
+  version : String
+  bins : Array[String]
+} derive(ToJson, @json.FromJson)
+pub fn ToolMeta::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ToolMeta::to_json(Self) -> Json
+
+pub struct ToolchainEnv {
+  moon : String
+  home : String?
+  bin : String?
+}
+
+// Type aliases
+
+// Traits

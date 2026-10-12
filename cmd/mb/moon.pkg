@@ -1,0 +1,11 @@
+import {
+  "kupas/mb" @lib,
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")
+
+options(
+  "bin-name": "mb",
+  "bin-target": "native",
+)

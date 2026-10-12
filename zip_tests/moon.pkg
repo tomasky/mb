@@ -1,0 +1,10 @@
+import {
+  "kupas/mb",
+  "bobzhang/zip",
+  "bobzhang/zip/member",
+  "bobzhang/zip/file",
+  "bobzhang/zip/types/fpath",
+  "moonbitlang/core/encoding/utf8",
+}
+
+warnings = "-unused_package"
