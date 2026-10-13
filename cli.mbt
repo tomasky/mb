@@ -580,8 +580,8 @@ fn cli_env(args : Array[String]) -> Int raise MbError {
     "list" | "ls" =>
       match parse_env_list_flags(rest) {
         Err(e) => usage_error(e, "mb env list [OPTIONS]")
-        Ok(global) => {
-          env_list(global)
+        Ok((global, mask)) => {
+          env_list(global, mask)
           0
         }
       }
@@ -656,10 +656,14 @@ fn print_env_list_help() -> Unit {
   let text =
     $|List the variables in .env (or the global ~/.mbenv)
     $|
+    $|Encrypted values are shown in clear only when stdout is a terminal;
+    $|otherwise they are masked as <encrypted>.
+    $|
     $|Usage: mb env list [OPTIONS]
     $|
     $|Options:
     $|  -g, --global  Operate on ~/.mbenv instead of ./.env
+    $|      --mask    Always mask encrypted values
     $|  -h, --help    Print help
   println(text)
 }
@@ -738,18 +742,21 @@ fn parse_env_names_flags(
 }
 
 ///|
-fn parse_env_list_flags(args : Array[String]) -> Result[Bool, String] {
+fn parse_env_list_flags(args : Array[String]) -> Result[(Bool, Bool), String] {
   let mut global = false
+  let mut mask = false
   for a in args {
     if a == "--global" || a == "-g" {
       global = true
+    } else if a == "--mask" {
+      mask = true
     } else if a.has_prefix("-") && a != "-" {
       return Err("unexpected option '" + a + "'")
     } else {
       return Err("unexpected argument '" + a + "'")
     }
   }
-  Ok(global)
+  Ok((global, mask))
 }
 
 ///|

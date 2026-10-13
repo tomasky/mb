@@ -87,7 +87,7 @@ fn constant_time_eq(a : Bytes, b : Bytes) -> Bool {
 
 ///|
 /// True when a dotenv value is an `ENC[...]` blob rather than plain text.
-pub fn is_encrypted_value(value : String) -> Bool {
+fn is_encrypted_value(value : String) -> Bool {
   value.has_prefix("ENC[") && value.has_suffix("]")
 }
 
@@ -99,7 +99,7 @@ fn subkey(master : String, purpose : String) -> Bytes {
 
 ///|
 /// Encrypt `plain` into an `ENC[...]` value using `master`.
-pub fn encrypt_value(plain : String, master : String) -> String raise MbError {
+fn encrypt_value(plain : String, master : String) -> String raise MbError {
   let enc_key = subkey(master, "mb-env/enc")
   let mac_key = subkey(master, "mb-env/mac")
   let nonce = match @env.rand(12) {
@@ -113,7 +113,7 @@ pub fn encrypt_value(plain : String, master : String) -> String raise MbError {
 
 ///|
 /// Decrypt an `ENC[...]` value using `master`.
-pub fn decrypt_value(value : String, master : String) -> String raise MbError {
+fn decrypt_value(value : String, master : String) -> String raise MbError {
   if !is_encrypted_value(value) {
     return value
   }

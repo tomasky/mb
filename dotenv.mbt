@@ -16,7 +16,7 @@ const ENV_KEY_DIRECTIVE : String = "# mb-env-key:"
 
 ///|
 /// The global env file: `$HOME/.mbenv`.
-pub fn global_env_file() -> String raise MbError {
+fn global_env_file() -> String raise MbError {
   path_join(home_dir(), ".mbenv")
 }
 
@@ -24,7 +24,7 @@ pub fn global_env_file() -> String raise MbError {
 /// Parse a single dotenv line into a key/value pair. Blank lines, comments and
 /// lines without `=` are skipped. Returns the raw value (still `ENC[...]` when
 /// encrypted).
-pub fn parse_dotenv_line(line : String) -> (String, String)? {
+fn parse_dotenv_line(line : String) -> (String, String)? {
   let s = line.trim()
   if s == "" || s.has_prefix("#") {
     return None
@@ -93,7 +93,7 @@ fn unescape_double(s : String) -> String {
 
 ///|
 /// Quote a plain value so it round-trips through the parser.
-pub fn format_dotenv_value(value : String) -> String {
+fn format_dotenv_value(value : String) -> String {
   if value == "" {
     return "\"\""
   }
@@ -117,7 +117,7 @@ pub fn format_dotenv_value(value : String) -> String {
 
 ///|
 /// Render one entry as a dotenv line. Encrypted values are written verbatim.
-pub fn format_dotenv_line(key : String, value : String) -> String {
+fn format_dotenv_line(key : String, value : String) -> String {
   if is_encrypted_value(value) {
     key + "=" + value
   } else {
@@ -127,7 +127,7 @@ pub fn format_dotenv_line(key : String, value : String) -> String {
 
 ///|
 /// Parse the text of a dotenv file.
-pub fn parse_dotenv(text : String) -> Array[(String, String)] {
+fn parse_dotenv(text : String) -> Array[(String, String)] {
   let out : Array[(String, String)] = []
   for line in text.split("\n") {
     match parse_dotenv_line(line.to_owned()) {
@@ -140,7 +140,7 @@ pub fn parse_dotenv(text : String) -> Array[(String, String)] {
 
 ///|
 /// Read and parse a dotenv file, returning an empty list when it is absent.
-pub fn read_env_file(path : String) -> Array[(String, String)] {
+fn read_env_file(path : String) -> Array[(String, String)] {
   if !file_exists(path) {
     return []
   }
@@ -150,7 +150,7 @@ pub fn read_env_file(path : String) -> Array[(String, String)] {
 
 ///|
 /// Write entries to a dotenv file, replacing its contents.
-pub fn write_env_file(
+fn write_env_file(
   path : String,
   entries : Array[(String, String)],
 ) -> Unit raise MbError {
@@ -165,7 +165,7 @@ pub fn write_env_file(
 
 ///|
 /// Read `$HOME/.mbenv`, splitting out the key directive from the entries.
-pub fn read_global_env() -> (String?, Array[(String, String)]) raise MbError {
+fn read_global_env() -> (String?, Array[(String, String)]) raise MbError {
   let path = global_env_file()
   if !file_exists(path) {
     return (None, [])
@@ -192,7 +192,7 @@ pub fn read_global_env() -> (String?, Array[(String, String)]) raise MbError {
 
 ///|
 /// Write `$HOME/.mbenv`, preserving the key directive.
-pub fn write_global_env(
+fn write_global_env(
   key : String?,
   entries : Array[(String, String)],
 ) -> Unit raise MbError {
@@ -212,7 +212,7 @@ pub fn write_global_env(
 ///|
 /// The encryption key: `MB_ENV_KEY` when set, otherwise the directive stored
 /// in `$HOME/.mbenv`.
-pub fn read_env_key() -> String? raise MbError {
+fn read_env_key() -> String? raise MbError {
   let from_env = env_or("MB_ENV_KEY", "")
   if from_env != "" {
     return Some(from_env)
@@ -224,9 +224,9 @@ pub fn read_env_key() -> String? raise MbError {
 }
 
 ///|
-/// Load a dotenv file, decrypting `ENC[...]` values with the available key.
+/// Read one dotenv file, decrypting `ENC[...]` values with the available key.
 /// Plain values are returned unchanged.
-pub fn load_dotenv(path : String) -> Array[(String, String)] raise MbError {
+fn load_env_file(path : String) -> Array[(String, String)] raise MbError {
   let entries = read_env_file(path)
   let mut key : String? = None
   let out : Array[(String, String)] = []
@@ -258,11 +258,22 @@ pub fn load_dotenv(path : String) -> Array[(String, String)] raise MbError {
 }
 
 ///|
-/// Load `paths` in order (later files win) and export the values into the
-/// current process, so child processes inherit them.
-pub fn apply_dotenv(paths : Array[String]) -> Unit raise MbError {
+/// Load the dotenv files that apply to the current project and export their
+/// values into the process environment, so child processes inherit them.
+///
+/// Files are read in this order, later ones overriding earlier ones:
+/// `$HOME/.mbenv`, `./.mbenv`, `./.env`. Values written as `ENC[...]` are
+/// decrypted with the key from `MB_ENV_KEY` or `$HOME/.mbenv`.
+pub fn load_dotenv() -> Unit raise MbError {
+  let paths : Array[String] = []
+  let global = global_env_file() catch { _ => "" }
+  if global != "" {
+    paths.push(global)
+  }
+  paths.push(".mbenv")
+  paths.push(".env")
   for path in paths {
-    for entry in load_dotenv(path) {
+    for entry in load_env_file(path) {
       let (k, v) = entry
       @env.set_env_var(k, v)
     }

@@ -53,7 +53,7 @@ fn env_upsert(
 
 ///|
 /// The `mb env set` command. Encrypts the value unless `plain` is set.
-pub fn env_set(
+fn env_set(
   key : String,
   value : String,
   global : Bool,
@@ -76,7 +76,7 @@ pub fn env_set(
 
 ///|
 /// The `mb env rm` command: remove one or more keys.
-pub fn env_rm(keys : Array[String], global : Bool) -> Unit raise MbError {
+fn env_rm(keys : Array[String], global : Bool) -> Unit raise MbError {
   let path = if global { global_env_file() } else { ".env" }
   let (existing_key, entries) = if global {
     read_global_env()
@@ -111,10 +111,17 @@ pub fn env_rm(keys : Array[String], global : Bool) -> Unit raise MbError {
 }
 
 ///|
-/// The `mb env list` command. Encrypted values are masked, so no key is needed.
-pub fn env_list(global : Bool) -> Unit raise MbError {
+/// The `mb env list` command.
+///
+/// Values are only revealed when stdout is a terminal, so a captured or piped
+/// listing shows encrypted values as `<encrypted>` instead of their contents.
+/// `mask` forces masking even on a terminal.
+fn env_list(global : Bool, mask : Bool) -> Unit raise MbError {
   let path = if global { global_env_file() } else { ".env" }
-  let entries = if global {
+  let reveal = !mask && is_tty()
+  let entries = if reveal {
+    load_env_file(path)
+  } else if global {
     let (_, e) = read_global_env()
     e
   } else {

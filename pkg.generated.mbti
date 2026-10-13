@@ -14,8 +14,6 @@ pub const MOONCAKES_API : String = "https://mooncakes.io"
 
 pub const MOONCAKES_DOWNLOAD : String = "https://download.mooncakes.io"
 
-pub fn apply_dotenv(Array[String]) -> Unit raise MbError
-
 pub fn base_name(String) -> String
 
 pub fn bin_dir() -> String raise MbError
@@ -30,8 +28,6 @@ pub fn copy_file(String, String) -> Unit raise MbError
 
 pub fn cstring(String) -> Bytes
 
-pub fn decrypt_value(String, String) -> String raise MbError
-
 pub fn default_toolchain() -> String? raise MbError
 
 pub fn dir_exists(String) -> Bool
@@ -42,21 +38,13 @@ pub fn download(String, String, Bool) -> Unit raise MbError
 
 pub fn effective_toolchain() -> String? raise MbError
 
-pub fn encrypt_value(String, String) -> String raise MbError
-
 pub fn ensure_shims(String) -> Unit raise MbError
 
 pub fn ensure_tools() -> Unit raise MbError
 
-pub fn env_list(Bool) -> Unit raise MbError
-
 pub fn env_or(String, String) -> String
 
 pub fn env_prefix(ToolchainEnv) -> String
-
-pub fn env_rm(Array[String], Bool) -> Unit raise MbError
-
-pub fn env_set(String, String, Bool, Bool) -> Unit raise MbError
 
 pub fn exit(Int) -> Unit
 
@@ -78,19 +66,11 @@ pub fn file_exists(String) -> Bool
 
 pub fn find_installed_toolchain(String) -> String? raise MbError
 
-pub fn format_dotenv_line(String, String) -> String
-
-pub fn format_dotenv_value(String) -> String
-
-pub fn global_env_file() -> String raise MbError
-
 pub fn home_dir() -> String raise MbError
 
 pub fn installed_toolchains() -> Array[String] raise MbError
 
 pub fn installed_tools() -> Array[ToolMeta] raise MbError
-
-pub fn is_encrypted_value(String) -> Bool
 
 pub fn is_executable_file(String) -> Bool
 
@@ -116,7 +96,7 @@ pub fn list_dir(String) -> Array[String] raise MbError
 
 pub fn list_dir_unsafe(String) -> Array[String]
 
-pub fn load_dotenv(String) -> Array[(String, String)] raise MbError
+pub fn load_dotenv() -> Unit raise MbError
 
 pub fn mb_home() -> String raise MbError
 
@@ -136,10 +116,6 @@ pub fn moon_which(String) -> Unit raise MbError
 
 pub fn parent_dir(String) -> String
 
-pub fn parse_dotenv(String) -> Array[(String, String)]
-
-pub fn parse_dotenv_line(String) -> (String, String)?
-
 pub fn parse_version_items(Json) -> Array[(String, String)]
 
 pub fn path_exists(String) -> Bool
@@ -151,12 +127,6 @@ pub fn path_join_all(Array[String]) -> String
 pub fn platform() -> String raise MbError
 
 pub fn read_bytes(String) -> Bytes raise MbError
-
-pub fn read_env_file(String) -> Array[(String, String)]
-
-pub fn read_env_key() -> String? raise MbError
-
-pub fn read_global_env() -> (String?, Array[(String, String)]) raise MbError
 
 pub fn read_text(String) -> String raise MbError
 
@@ -217,10 +187,6 @@ pub fn toolchain_dir(String) -> String raise MbError
 pub fn walk_files(String) -> Array[String] raise MbError
 
 pub fn write_bytes(String, Bytes) -> Unit raise MbError
-
-pub fn write_env_file(String, Array[(String, String)]) -> Unit raise MbError
-
-pub fn write_global_env(String?, Array[(String, String)]) -> Unit raise MbError
 
 pub fn write_text(String, String) -> Unit raise MbError
 

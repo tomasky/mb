@@ -104,7 +104,8 @@ described below. When no managed toolchain is selected it falls back to the
 mb env set API_KEY=secret         # encrypted, stored in ./.env
 mb env set GREETING "hello world" --plain
 mb env set --global GITHUB_TOKEN=ghp_xxx
-mb env list                       # masked values; no key needed
+mb env list                       # clear values on a terminal, masked otherwise
+mb env list --mask                # always mask encrypted values
 mb env list --global
 mb env rm API_KEY
 ```
@@ -116,9 +117,17 @@ mb env rm API_KEY
   encryption key.
 
 Values are encrypted by default and written as `KEY=ENC[<hex>]`; the keys stay
-in plaintext, so `mb env list` never needs the key (encrypted values are shown
-as `<encrypted>`). `--plain` stores a value verbatim, so an ordinary
-hand-written `.env` keeps working and plain and encrypted values can be mixed.
+in plaintext, so listing never needs the key. `mb env list` reveals values only
+when stdout is a terminal, so a piped or captured listing shows `<encrypted>`
+instead; `--mask` forces masking. `--plain` stores a value verbatim, so an
+ordinary hand-written `.env` keeps working and plain and encrypted values can
+be mixed.
+
+This TTY check is best-effort only: `mb run` must decrypt to hand variables to
+the child process, and the key lives in `$HOME/.mbenv`, so a process with shell
+access can still recover values (for example via `mb run printenv`). Treat the
+encryption as protection at rest (git, sync, backups), not as a boundary
+against another process running as you.
 
 Encryption is **ChaCha20 + HMAC-SHA256 in encrypt-then-MAC order**
 (`moonbitlang/x/crypto` ships no AEAD): a random 96-bit nonce per value and two
@@ -131,7 +140,8 @@ stores it in `$HOME/.mbenv` as a `# mb-env-key: <key>` directive. Set
 machine reads the same files.
 
 `mb run` loads `$HOME/.mbenv`, then `./.mbenv`, then `./.env` (later files win)
-and exports the result before running the command.
+and exports the result before running the command. MoonBit programs can do the
+same with the single public entry point `load_dotenv()`.
 
 ### Tools
 

@@ -56,7 +56,7 @@ test "encrypted values can be stored and reloaded" {
   write_env_file(path, [("TOKEN", enc), ("PLAIN", "ok")])
   assert_eq(read_env_file(path), [("TOKEN", enc), ("PLAIN", "ok")])
   @env.set_env_var("MB_ENV_KEY", "k")
-  assert_eq(load_dotenv(path), [("TOKEN", "tok"), ("PLAIN", "ok")])
+  assert_eq(load_env_file(path), [("TOKEN", "tok"), ("PLAIN", "ok")])
   @env.unset_env_var("MB_ENV_KEY")
   rm_rf(path)
 }
@@ -100,7 +100,9 @@ test "parse_env_names_flags" {
 
 ///|
 test "parse_env_list_flags" {
-  assert_true(parse_env_list_flags(["-g"]).unwrap())
-  assert_false(parse_env_list_flags([]).unwrap())
+  assert_eq(parse_env_list_flags(["-g"]).unwrap(), (true, false))
+  assert_eq(parse_env_list_flags(["--mask"]).unwrap(), (false, true))
+  assert_eq(parse_env_list_flags([]).unwrap(), (false, false))
   assert_true(parse_env_list_flags(["x"]) is Err(_))
+  assert_true(parse_env_list_flags(["--mask", "-g"]).unwrap() == (true, true))
 }
