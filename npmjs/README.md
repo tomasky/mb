@@ -1,6 +1,6 @@
 # mb (npm)
 
-npm wrapper for [`mb`](../../README.md) — a MoonBit-native, uv-style toolchain
+npm wrapper for [`mb`](../../blob/main/README.mbt.md) — a MoonBit-native, uv-style toolchain
 and package manager.
 
 ```bash

@@ -210,7 +210,3 @@ moon check          # type-check
 moon test           # run the test suite
 moon info && moon fmt
 ```
-
-The public library API lives in the root package (`kupas/mb`, the mooncakes.io
-module name); the CLI entry point is `cmd/mb`. The GitHub repository is
-`tomasky/mb`.
