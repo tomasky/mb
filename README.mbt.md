@@ -47,6 +47,7 @@ mb run [--moon <version>] <command> [args...]
 mb moon list | install [version] | uninstall <version> | default <version> | which [version] | latest
 mb tool install <author>/<module>[@<version>] [--force] [--bin-dir <dir>] [--moon <version>]
 mb tool list [--outdated] | upgrade [--all] <name>... | uninstall [--all] <name>...
+mb env set <KEY>=<VALUE> [--global] [--plain] | rm [--global] <KEY>... | list [--global]
 mb help | version
 ```
 
@@ -93,8 +94,44 @@ mb run --moon nightly node script.js
 ```
 
 `mb run` prepends the selected toolchain's `bin` to `PATH` and points
-`MOON_HOME` at it before executing the command. When no managed toolchain is
-selected it falls back to the `moon` already on `PATH`.
+`MOON_HOME` at it before executing the command, and exports the dotenv files
+described below. When no managed toolchain is selected it falls back to the
+`moon` already on `PATH`.
+
+### Environment variables
+
+```bash
+mb env set API_KEY=secret         # encrypted, stored in ./.env
+mb env set GREETING "hello world" --plain
+mb env set --global GITHUB_TOKEN=ghp_xxx
+mb env list                       # masked values; no key needed
+mb env list --global
+mb env rm API_KEY
+```
+
+`mb env` manages the dotenv files that `mb run` loads:
+
+- **project** (default): `./.env`, with `./.mbenv` also loaded when present;
+- **global** (`--global`/`-g`): `$HOME/.mbenv`, which additionally stores the
+  encryption key.
+
+Values are encrypted by default and written as `KEY=ENC[<hex>]`; the keys stay
+in plaintext, so `mb env list` never needs the key (encrypted values are shown
+as `<encrypted>`). `--plain` stores a value verbatim, so an ordinary
+hand-written `.env` keeps working and plain and encrypted values can be mixed.
+
+Encryption is **ChaCha20 + HMAC-SHA256 in encrypt-then-MAC order**
+(`moonbitlang/x/crypto` ships no AEAD): a random 96-bit nonce per value and two
+subkeys derived from the master key with HMAC-SHA256. The tag is verified
+before decryption, so a wrong key or a tampered value is rejected.
+
+The first time a value has to be encrypted, `mb env set` prompts for a key and
+stores it in `$HOME/.mbenv` as a `# mb-env-key: <key>` directive. Set
+`MB_ENV_KEY` to override it (useful in CI); using the same value on another
+machine reads the same files.
+
+`mb run` loads `$HOME/.mbenv`, then `./.mbenv`, then `./.env` (later files win)
+and exports the result before running the command.
 
 ### Tools
 
@@ -155,6 +192,7 @@ error.
 | `MB_HOME`        | Data directory for toolchains and tools              | `~/.local/share/mb` |
 | `MB_BIN_DIR`     | Where executables are installed                      | `~/.local/bin`      |
 | `XDG_DATA_HOME` | Used when `MB_HOME` is unset                         | `~/.local/share`    |
+| `MB_ENV_KEY`     | Encryption key for `.env` values                     | `~/.mbenv` directive |
 | `GITHUB_TOKEN`   | GitHub API token for release lookups (also `GH_TOKEN`) | unset             |
 
 ## Layout
@@ -166,6 +204,10 @@ $MB_HOME/
   tool/<author>-<name>/<version>/
     src/                   # extracted mooncakes source
     tool.json              # { name, version, bins, bin }
+
+./.env                     # project env (values encrypted)
+./.mbenv                   # optional second project env file
+~/.mbenv                   # global env + the `# mb-env-key:` directive
 ```
 
 ## Releases, CI and npm

@@ -23,4 +23,7 @@ extern "C" fn mb_chmod_exec(path : Bytes) -> Int = "mb_chmod_exec"
 extern "C" fn mb_isatty_stdout() -> Int = "mb_isatty_stdout"
 
 ///|
+extern "C" fn mb_read_line() -> Bytes = "mb_read_line"
+
+///|
 extern "C" fn mb_exit(code : Int) -> Unit = "mb_exit"

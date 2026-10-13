@@ -95,6 +95,36 @@ MOONBIT_FFI_EXPORT int mb_chmod_exec(moonbit_bytes_t path) {
   return chmod((const char *)path, 0755);
 }
 
+// Read one line from stdin, without the trailing newline. Returns an empty
+// string on EOF.
+MOONBIT_FFI_EXPORT moonbit_bytes_t mb_read_line(void) {
+  size_t cap = 128, len = 0;
+  char *buf = (char *)malloc(cap);
+  if (buf == NULL) {
+    return moonbit_make_bytes(0, 0);
+  }
+  int c;
+  while ((c = fgetc(stdin)) != EOF && c != '\n') {
+    if (len + 1 >= cap) {
+      cap *= 2;
+      char *grown = (char *)realloc(buf, cap);
+      if (grown == NULL) {
+        free(buf);
+        return moonbit_make_bytes(0, 0);
+      }
+      buf = grown;
+    }
+    buf[len++] = (char)c;
+  }
+  if (len > 0 && buf[len - 1] == '\r') {
+    len--;
+  }
+  moonbit_bytes_t out = moonbit_make_bytes((int32_t)len, 0);
+  memcpy(out, buf, len);
+  free(buf);
+  return out;
+}
+
 // Whether stdout is a terminal (used for colour/progress decisions).
 MOONBIT_FFI_EXPORT int mb_isatty_stdout(void) {
   return isatty(STDOUT_FILENO) ? 1 : 0;

@@ -27,6 +27,7 @@ pub fn run_cli(argv : Array[String]) -> Int raise MbError {
     "run" => cli_run(rest)
     "moon" => cli_moon(rest)
     "tool" => cli_tool(rest)
+    "env" => cli_env(rest)
     "help" => cli_help(rest)
     "version" | "--version" | "-V" => {
       println("mb " + MB_VERSION)
@@ -82,6 +83,17 @@ fn cli_help(rest : Array[String]) -> Int {
               0
             }
           }
+        "env" =>
+          match rest.get(1) {
+            None => {
+              print_env_help()
+              0
+            }
+            Some(sub) => {
+              print_env_sub_help(sub)
+              0
+            }
+          }
         other => {
           eprintln("error: unrecognized command '" + other + "'")
           eprintln("")
@@ -134,14 +146,16 @@ fn print_help() -> Unit {
     $|  run       Run a command inside a managed MoonBit environment
     $|  moon      Manage MoonBit toolchains
     $|  tool      Install, list, upgrade and remove tools from mooncakes.io
+    $|  env       Manage .env files for the current project or globally
     $|
     $|Options:
     $|  -h, --help     Print help
     $|  -V, --version  Print version
     $|
     $|Environment:
-    $|  MB_HOME     Data directory (default: ~/.local/share/mb)
-    $|  MB_BIN_DIR  Where executables are installed (default: ~/.local/bin)
+    $|  MB_HOME      Data directory (default: ~/.local/share/mb)
+    $|  MB_BIN_DIR   Where executables are installed (default: ~/.local/bin)
+    $|  MB_ENV_KEY   Encryption key for .env values (default: ~/.mbenv)
   println(text)
 }
 
@@ -528,6 +542,214 @@ fn print_tool_uninstall_help() -> Unit {
     $|      --all    Uninstall all installed tools
     $|  -h, --help   Print help
   println(text)
+}
+
+///|
+fn cli_env(args : Array[String]) -> Int raise MbError {
+  if args.is_empty() {
+    print_env_help()
+    return 0
+  }
+  let sub = args[0]
+  if sub == "-h" || sub == "--help" || sub == "help" {
+    print_env_help()
+    return 0
+  }
+  let rest = tail(args, 1)
+  if has_help_flag(rest) {
+    print_env_sub_help(sub)
+    return 0
+  }
+  match sub {
+    "set" | "add" =>
+      match parse_env_set_flags(rest) {
+        Err(e) => usage_error(e, "mb env set [OPTIONS] <KEY>=<VALUE>")
+        Ok(o) => {
+          env_set(o.key, o.value, o.global, o.plain)
+          0
+        }
+      }
+    "rm" | "remove" | "unset" =>
+      match parse_env_names_flags(rest) {
+        Err(e) => usage_error(e, "mb env rm [OPTIONS] <KEY>...")
+        Ok((keys, global)) => {
+          env_rm(keys, global)
+          0
+        }
+      }
+    "list" | "ls" =>
+      match parse_env_list_flags(rest) {
+        Err(e) => usage_error(e, "mb env list [OPTIONS]")
+        Ok(global) => {
+          env_list(global)
+          0
+        }
+      }
+    other => unknown_subcommand("mb env <COMMAND>", other)
+  }
+}
+
+///|
+fn print_env_help() -> Unit {
+  let text =
+    $|Manage .env files for the current project or globally
+    $|
+    $|Usage: mb env [OPTIONS] <COMMAND>
+    $|
+    $|Commands:
+    $|  set    Set a variable (encrypted by default)
+    $|  rm     Remove one or more variables
+    $|  list   List the variables (encrypted values are masked)
+    $|
+    $|Options:
+    $|  -h, --help  Print help
+  println(text)
+}
+
+///|
+fn print_env_sub_help(sub : String) -> Unit {
+  match sub {
+    "set" | "add" => print_env_set_help()
+    "rm" | "remove" | "unset" => print_env_rm_help()
+    "list" | "ls" => print_env_list_help()
+    _ => print_env_help()
+  }
+}
+
+///|
+fn print_env_set_help() -> Unit {
+  let text =
+    $|Set a variable in .env (or the global ~/.mbenv)
+    $|
+    $|Usage: mb env set [OPTIONS] <KEY>=<VALUE>
+    $|       mb env set [OPTIONS] <KEY> <VALUE>
+    $|
+    $|Arguments:
+    $|  <KEY>    The variable name
+    $|  <VALUE>  The value; encrypted by default
+    $|
+    $|Options:
+    $|  -g, --global  Write to ~/.mbenv instead of ./.env
+    $|      --plain   Store the value in plaintext
+    $|  -h, --help    Print help
+  println(text)
+}
+
+///|
+fn print_env_rm_help() -> Unit {
+  let text =
+    $|Remove one or more variables from .env (or the global ~/.mbenv)
+    $|
+    $|Usage: mb env rm [OPTIONS] <KEY>...
+    $|
+    $|Arguments:
+    $|  <KEY>...  The variable name(s) to remove
+    $|
+    $|Options:
+    $|  -g, --global  Operate on ~/.mbenv instead of ./.env
+    $|  -h, --help    Print help
+  println(text)
+}
+
+///|
+fn print_env_list_help() -> Unit {
+  let text =
+    $|List the variables in .env (or the global ~/.mbenv)
+    $|
+    $|Usage: mb env list [OPTIONS]
+    $|
+    $|Options:
+    $|  -g, --global  Operate on ~/.mbenv instead of ./.env
+    $|  -h, --help    Print help
+  println(text)
+}
+
+///|
+priv struct EnvSetOpts {
+  key : String
+  value : String
+  global : Bool
+  plain : Bool
+}
+
+///|
+fn parse_env_set_flags(args : Array[String]) -> Result[EnvSetOpts, String] {
+  let mut global = false
+  let mut plain = false
+  let pos : Array[String] = []
+  for a in args {
+    if a == "--global" || a == "-g" {
+      global = true
+    } else if a == "--plain" {
+      plain = true
+    } else if a.has_prefix("-") && a != "-" {
+      return Err("unexpected option '" + a + "'")
+    } else {
+      pos.push(a)
+    }
+  }
+  let (key, value) = if pos.length() == 1 {
+    match pos[0].find("=") {
+      Some(i) =>
+        if i == 0 {
+          return Err("invalid assignment '" + pos[0] + "': empty key")
+        } else {
+          (pos[0][:i].to_owned(), pos[0][i + 1:].to_owned())
+        }
+      None =>
+        return Err(
+          "invalid assignment '" + pos[0] + "': expected <KEY>=<VALUE>",
+        )
+    }
+  } else if pos.length() == 2 {
+    (pos[0], pos[1])
+  } else if pos.is_empty() {
+    return Err(
+      "the following required arguments were not provided:\n  <KEY>=<VALUE>",
+    )
+  } else {
+    return Err("unexpected argument '" + pos[2] + "'")
+  }
+  if key == "" {
+    return Err("the key must not be empty")
+  }
+  Ok({ key, value, global, plain, })
+}
+
+///|
+fn parse_env_names_flags(
+  args : Array[String],
+) -> Result[(Array[String], Bool), String] {
+  let keys : Array[String] = []
+  let mut global = false
+  for a in args {
+    if a == "--global" || a == "-g" {
+      global = true
+    } else if a.has_prefix("-") && a != "-" {
+      return Err("unexpected option '" + a + "'")
+    } else {
+      keys.push(a)
+    }
+  }
+  if keys.is_empty() {
+    return Err("the following required argument was not provided:\n  <KEY>...")
+  }
+  Ok((keys, global))
+}
+
+///|
+fn parse_env_list_flags(args : Array[String]) -> Result[Bool, String] {
+  let mut global = false
+  for a in args {
+    if a == "--global" || a == "-g" {
+      global = true
+    } else if a.has_prefix("-") && a != "-" {
+      return Err("unexpected option '" + a + "'")
+    } else {
+      return Err("unexpected argument '" + a + "'")
+    }
+  }
+  Ok(global)
 }
 
 ///|

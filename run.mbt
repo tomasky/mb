@@ -8,6 +8,16 @@ pub fn cmd_run(moon_version : String, cmd : Array[String]) -> Int raise MbError 
   if cmd.is_empty() {
     raise MbError("usage: mb run [--moon <version>] <command> [args...]")
   }
+  // Export `.env`/`.mbenv` from the current directory and the global
+  // `~/.mbenv`; later files win and children inherit the result. The global
+  // file is skipped when `HOME` is unavailable.
+  let global = global_env_file() catch { _ => "" }
+  let paths = if global == "" {
+    [".mbenv", ".env"]
+  } else {
+    [global, ".mbenv", ".env"]
+  }
+  apply_dotenv(paths)
   let env = if moon_version != "" {
     Some(resolve_toolchain(moon_version))
   } else {
