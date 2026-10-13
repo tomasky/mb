@@ -11,7 +11,7 @@
 
 name = "kupas/mb"
 
-version = "0.1.5"
+version = "0.1.6"
 
 readme = "README.mbt.md"
 
@@ -23,7 +23,7 @@ keywords = [ "moonbit", "package-manager", "toolchain", "cli", "uv" ]
 
 preferred_target = "native"
 
-description = "A MoonBit-native, uv-style toolchain and package manager: manage MoonBit toolchains and install tools from mooncakes.io."
+description = "A MoonBit-native, uv-style toolchain and package manager: manage MoonBit toolchains and install tools from mooncakes.io and github."
 
 import {
   "moonbitlang/x@0.5.5",
