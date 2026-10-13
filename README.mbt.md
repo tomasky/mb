@@ -8,8 +8,9 @@ manage Python:
 
 - **MoonBit toolchains** — download, install and switch between compiler
   releases from `cli.moonbitlang.com` (`mb moon ...`).
-- **Tools** — download a module from [mooncakes.io](https://mooncakes.io),
-  compile it to a native binary and install it (`mb tool ...`).
+- **Tools** — install a prebuilt binary from a module's GitHub release,
+  falling back to downloading a module from
+  [mooncakes.io](https://mooncakes.io) and compiling it (`mb tool ...`).
 
 Everything installs to `~/.local/bin` by default. Only Linux (`x86_64`,
 `aarch64`) and macOS on Apple Silicon (`arm64`) are supported: the MoonBit
@@ -98,27 +99,46 @@ selected it falls back to the `moon` already on `PATH`.
 ### Tools
 
 ```bash
-mb tool install bobzhang/zip         # latest version
+mb tool install bobzhang/zip         # a mooncakes.io module, latest version
 mb tool install bobzhang/zip@0.1.1   # pinned version
+mb tool install denoland/deno        # any GitHub repository with releases
+mb tool install denoland/deno@2.9.7  # pinned to a release tag
+mb tool install https://github.com/BurntSushi/ripgrep
 mb tool install author/tool --moon 0.10.14 --bin-dir ~/.local/bin
 mb tool list                         # or: mb tool list --outdated
 mb tool upgrade author/tool          # one or more names, or --all
 mb tool uninstall author/tool        # one or more names, or --all
 ```
 
-`mb tool install`:
+`mb tool install` resolves the name on mooncakes.io first. When the name is a
+registered module it prefers a **prebuilt binary from the module's GitHub
+release** and only compiles from source when there is none:
 
-1. resolves the module and version via `mooncakes.io/api/v0/manifest/...`;
-2. downloads `https://download.mooncakes.io/user/<author>/<module>/<version>.zip`
-   and verifies its SHA-256 against the registry checksum;
-3. extracts the source to `$MB_HOME/tool/<author>-<module>/<version>/src`;
-4. builds it with a managed (or system) toolchain:
-   `moon build --target native --release`;
-5. copies every native executable it produced into `~/.local/bin`.
+1. fetch `mooncakes.io/api/v0/manifest/<author>/<module>` to get the version,
+   checksum and `metadata.repository`;
+2. if the repository is on GitHub, look for a release asset that matches the
+   host OS and CPU architecture. A pinned version is matched against the
+   `v<version>` and `<version>` tags; without a pin the repository's latest
+   release is used. Assets that are archives (`zip`, `tar`, `tar.gz`/`tgz`,
+   `tar.xz`/`txz`, `tar.bz2`, `tar.zst`, bare `gz`/`xz`/`bz2`/`zst`, ...) are
+   unpacked and every executable inside is installed; a plain asset is
+   installed under a name derived from its filename (so `mb-linux-x86_64`
+   becomes `mb`). GitHub's `sha256` digest is verified when present;
+3. otherwise fall back to building from source: download
+   `https://download.mooncakes.io/user/<author>/<module>/<version>.zip`, verify
+   its SHA-256 against the registry checksum, extract it to
+   `$MB_HOME/tool/<author>-<module>/<version>/src` and run
+   `moon build --target native --release` with a managed (or system) toolchain;
+4. copy every executable into `~/.local/bin` (or the `--bin-dir <dir>` given).
+
+A name that is **not** on mooncakes.io is treated as a GitHub repository —
+`owner/repo`, `owner/repo@tag` or a full URL — and installed from its releases
+the same way. It is recorded under the repository slug and the release tag.
 
 `mb tool list` prints the tools directory (`$MB_HOME/tool`), and for each tool
 the directory its binaries were installed into and any that are missing. With
-`--outdated` it consults mooncakes.io and marks tools that have a newer version.
+`--outdated` it consults mooncakes.io and marks tools that have a newer version;
+a GitHub-only tool is reported as unchecked, since it has no registry entry.
 `mb tool uninstall` removes the binaries from that same directory, so a tool
 installed with `--bin <dir>`/`--bin-dir <dir>` is cleaned up correctly too.
 
@@ -135,6 +155,7 @@ error.
 | `MB_HOME`        | Data directory for toolchains and tools              | `~/.local/share/mb` |
 | `MB_BIN_DIR`     | Where executables are installed                      | `~/.local/bin`      |
 | `XDG_DATA_HOME` | Used when `MB_HOME` is unset                         | `~/.local/share`    |
+| `GITHUB_TOKEN`   | GitHub API token for release lookups (also `GH_TOKEN`) | unset             |
 
 ## Layout
 

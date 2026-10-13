@@ -140,9 +140,16 @@ pub fn tool_install(
   force : Bool,
 ) -> Unit raise MbError {
   ensure_tools()
+  let bin_dir = if bin_override != "" { bin_override } else { bin_dir() }
   let (name, requested) = split_spec(spec)
   println("Resolving " + name + " ...")
-  let manifest = fetch_manifest(name, requested)
+  // A name that is not on mooncakes.io is tried as a GitHub repository
+  // (`owner/repo` or a URL) and installed from its releases.
+  let manifest = fetch_manifest(name, requested) catch { _ => Json::null() }
+  match manifest {
+    Null => return install_github_tool(spec, bin_dir, force)
+    _ => ()
+  }
   let meta = match json_object(manifest, "metadata") {
     Some(m) => m
     None =>
@@ -169,6 +176,39 @@ pub fn tool_install(
       " is already installed; use --force to reinstall",
     )
     return
+  }
+  // Prefer a prebuilt binary from the module's GitHub release when one matches
+  // this platform; otherwise fall through to building from source.
+  let repository = match json_string(meta, "repository") {
+    Some(r) => r
+    None => ""
+  }
+  if repository != "" {
+    let released = try_install_release(
+      resolved_name, version, repository, requested, bin_dir,
+    ) catch {
+      e => {
+        eprintln("warning: " + e.message() + "; building from source instead")
+        None
+      }
+    }
+    match released {
+      Some(bins) => {
+        let record : ToolMeta = {
+          name: resolved_name,
+          version,
+          bins,
+          bin: Some(bin_dir),
+        }
+        write_text(
+          path_join(dir, "tool.json"),
+          @json.to_json(record).stringify(indent=2),
+        )
+        println("Installed " + resolved_name + " " + version + " (prebuilt)")
+        return
+      }
+      None => ()
+    }
   }
   // Download and verify the source archive.
   let url = MOONCAKES_DOWNLOAD +
@@ -200,7 +240,6 @@ pub fn tool_install(
   println("Building " + resolved_name + " " + version + " ...")
   let built = build_tool(src, tc)
   // Install the binaries.
-  let bin_dir = if bin_override != "" { bin_override } else { bin_dir() }
   mkdir_p(bin_dir)
   let installed : Array[String] = []
   for (tool_name, path) in built {

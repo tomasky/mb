@@ -81,6 +81,38 @@ pub fn fetch_text(url : String) -> String raise MbError {
 }
 
 ///|
+/// Fetch `url` with extra request headers and return the body as text. Used
+/// for the GitHub API, which asks callers to identify themselves.
+fn fetch_text_headers(
+  url : String,
+  headers : Array[String],
+) -> String raise MbError {
+  let tmp = temp_path()
+  let mut extra = ""
+  for h in headers {
+    extra = extra + " -H " + shell_quote(h)
+  }
+  let cmd = "curl -fL -s" +
+    extra +
+    " --retry 3 --retry-delay 1 --connect-timeout 30 -o " +
+    shell_quote(tmp) +
+    " " +
+    shell_quote(url)
+  let code = run_status(cmd)
+  if code != 0 {
+    rm_rf(tmp) catch {
+      _ => ()
+    }
+    raise MbError("failed to fetch " + url + " (curl exit \{code})")
+  }
+  let data = read_bytes(tmp)
+  rm_rf(tmp) catch {
+    _ => ()
+  }
+  @utf8.decode_lossy(data)
+}
+
+///|
 /// Fetch and parse a JSON document.
 pub fn fetch_json(url : String) -> Json raise MbError {
   let text = fetch_text(url)
