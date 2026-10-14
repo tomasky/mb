@@ -227,3 +227,19 @@ test "ToolMeta json: legacy records without `bin` still parse" {
   assert_eq(round.bin, Some("/opt/bin"))
   assert_eq(round.bins, ["x", "y"])
 }
+
+///|
+test "ensure_bin_free refuses to clobber existing executables" {
+  let dir = temp_path() + ".d"
+  mkdir_p(dir)
+  write_text(path_join(dir, "foo"), "x")
+  let mut refused = false
+  ensure_bin_free(dir, ["foo"], false) catch {
+    _ => refused = true
+  }
+  assert_true(refused)
+  // `--force` overwrites, and an absent name is fine.
+  ensure_bin_free(dir, ["foo"], true)
+  ensure_bin_free(dir, ["bar"], false)
+  rm_rf(dir)
+}

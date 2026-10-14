@@ -178,6 +178,12 @@ release** and only compiles from source when there is none:
    `moon build --target native --release` with a managed (or system) toolchain;
 4. copy every executable into `~/.local/bin` (or the `--bin-dir <dir>` given).
 
+Executables are never clobbered silently: if a target name already exists in
+the bin directory (whether an unrelated file or another tool's binary),
+`mb tool install` fails with `executable already exists: <name> (use --force to
+overwrite)`. Pass `--force` to replace it. `mb tool uninstall` only removes a
+binary when no other installed tool still provides it.
+
 A name that is **not** on mooncakes.io is treated as a GitHub repository —
 `owner/repo`, `owner/repo@tag` or a full URL — and installed from its releases
 the same way. It is recorded under the repository slug and the release tag.

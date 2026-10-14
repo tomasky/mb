@@ -100,9 +100,39 @@ pub fn discover_binaries(src : String) -> Array[(String, String)] raise MbError 
     } else {
       raw
     }
-    out.push((tool_name, abs))
+    // Several packages can share a binary name; keep the first one.
+    let mut dup = false
+    for (n, _) in out {
+      if n == tool_name {
+        dup = true
+      }
+    }
+    if !dup {
+      out.push((tool_name, abs))
+    }
   }
   out
+}
+
+///|
+/// Refuse to clobber executables that are already present in `bin` unless
+/// `force` is set, mirroring `uv tool install`. The check runs before anything
+/// is copied, so a conflict leaves the existing files untouched.
+fn ensure_bin_free(
+  bin : String,
+  names : Array[String],
+  force : Bool,
+) -> Unit raise MbError {
+  if force {
+    return
+  }
+  for name in names {
+    if path_exists(path_join(bin, name)) {
+      raise MbError(
+        "executable already exists: " + name + " (use --force to overwrite)",
+      )
+    }
+  }
 }
 
 ///|
@@ -185,7 +215,7 @@ pub fn tool_install(
   }
   if repository != "" {
     let released = try_install_release(
-      resolved_name, version, repository, requested, bin_dir,
+      resolved_name, version, repository, requested, bin_dir, force,
     ) catch {
       e => {
         eprintln("warning: " + e.message() + "; building from source instead")
@@ -239,7 +269,12 @@ pub fn tool_install(
   let tc = resolve_toolchain(toolchain_override)
   println("Building " + resolved_name + " " + version + " ...")
   let built = build_tool(src, tc)
-  // Install the binaries.
+  // Install the binaries, refusing to clobber unrelated executables.
+  let names : Array[String] = []
+  for (n, _) in built {
+    names.push(n)
+  }
+  ensure_bin_free(bin_dir, names, force)
   mkdir_p(bin_dir)
   let installed : Array[String] = []
   for (tool_name, path) in built {
@@ -355,11 +390,27 @@ pub fn tool_uninstall(spec : String) -> Unit raise MbError {
     if requested is Some(v) && v != t.version {
       continue
     }
-    // Remove from the directory the tool was actually installed into.
+    // Remove from the directory the tool was actually installed into, but
+    // keep an executable that another installed tool still provides.
     let bin = tool_bin_dir(t)
     for b in t.bins {
-      rm_rf(path_join(bin, b)) catch {
-        _ => ()
+      let mut shared = false
+      for other in tools {
+        if other.name == t.name && other.version == t.version {
+          continue
+        }
+        if tool_bin_dir(other) == bin {
+          for ob in other.bins {
+            if ob == b {
+              shared = true
+            }
+          }
+        }
+      }
+      if !shared {
+        rm_rf(path_join(bin, b)) catch {
+          _ => ()
+        }
       }
     }
     rm_rf(tool_dir(t.name, t.version)) catch {

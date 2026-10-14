@@ -450,6 +450,7 @@ fn try_install_release(
   repository : String,
   requested : String?,
   bin : String,
+  force : Bool,
 ) -> Array[String]? raise MbError {
   let repo = match parse_github_repo(repository) {
     Some(r) => r
@@ -466,7 +467,14 @@ fn try_install_release(
   }
   println("Found release asset " + asset_name + " for " + plat)
   Some(
-    download_and_install_asset(asset_name, url, digest, short_name(name), bin),
+    download_and_install_asset(
+      asset_name,
+      url,
+      digest,
+      short_name(name),
+      bin,
+      force,
+    ),
   )
 }
 
@@ -482,6 +490,7 @@ fn download_and_install_asset(
   digest : String?,
   fallback_name : String,
   bin : String,
+  force : Bool,
 ) -> Array[String] raise MbError {
   println("Downloading " + url + " ...")
   let tmp = temp_path()
@@ -506,7 +515,13 @@ fn download_and_install_asset(
   if is_archive_name(asset_name) {
     let dir = temp_path() + ".d"
     extract_archive(tmp, asset_name, dir)
-    for entry in collect_executables(dir) {
+    let found = collect_executables(dir)
+    let names : Array[String] = []
+    for (n, _) in found {
+      names.push(n)
+    }
+    ensure_bin_free(bin, names, force)
+    for entry in found {
       let (bin_name, path) = entry
       let dest = path_join(bin, bin_name)
       copy_file(path, dest)
@@ -520,6 +535,7 @@ fn download_and_install_asset(
   } else {
     let derived = binary_name_from_asset(asset_name)
     let bin_name = if derived == "" { fallback_name } else { derived }
+    ensure_bin_free(bin, [bin_name], force)
     let dest = path_join(bin, bin_name)
     copy_file(tmp, dest)
     chmod_exec(dest)
@@ -587,6 +603,7 @@ fn install_github_tool(
     digest,
     short_name(repo),
     bin,
+    force,
   )
   let record : ToolMeta = { name: repo, version: tag, bins, bin: Some(bin), }
   write_text(
