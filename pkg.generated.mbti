@@ -193,7 +193,9 @@ pub fn write_text(String, String) -> Unit raise MbError
 // Errors
 pub(all) suberror MbError {
   MbError(String)
+  Coded(String, Int)
 }
+pub fn MbError::exit_code(Self) -> Int
 pub fn MbError::message(Self) -> String
 
 // Types and methods

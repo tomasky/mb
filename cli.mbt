@@ -285,12 +285,12 @@ fn print_moon_help() -> Unit {
     $|Usage: mb moon [OPTIONS] <COMMAND>
     $|
     $|Commands:
-    $|  list        List installed and available toolchains
-    $|  install     Install a MoonBit toolchain
-    $|  uninstall   Remove an installed toolchain
-    $|  default     Set the default toolchain
-    $|  which       Print the path to a toolchain's `moon`
-    $|  latest      Print the latest published toolchain version
+    $|  list (ls)                List installed and available toolchains
+    $|  install (add)            Install a MoonBit toolchain
+    $|  uninstall (remove, rm)   Remove an installed toolchain
+    $|  default                  Set the default toolchain
+    $|  which                    Print the path to a toolchain's `moon`
+    $|  latest                   Print the latest published toolchain version
     $|
     $|Options:
     $|  -h, --help  Print help
@@ -456,10 +456,10 @@ fn print_tool_help() -> Unit {
     $|Usage: mb tool [OPTIONS] <COMMAND>
     $|
     $|Commands:
-    $|  install    Install a tool from a mooncakes.io module
-    $|  upgrade    Upgrade installed tools to their latest version
-    $|  list       List installed tools
-    $|  uninstall  Remove an installed tool
+    $|  install (add)              Install a tool from a mooncakes.io module
+    $|  upgrade (update, up)       Upgrade installed tools to their latest version
+    $|  list (ls)                  List installed tools
+    $|  uninstall (remove, rm)     Remove an installed tool
     $|
     $|Options:
     $|  -h, --help  Print help
@@ -597,9 +597,9 @@ fn print_env_help() -> Unit {
     $|Usage: mb env [OPTIONS] <COMMAND>
     $|
     $|Commands:
-    $|  set    Set a variable (encrypted by default)
-    $|  rm     Remove one or more variables
-    $|  list   List the variables (encrypted values are masked)
+    $|  set          Set a variable (encrypted by default)
+    $|  rm           Remove one or more variables
+    $|  list (ls)    List the variables (encrypted values are masked)
     $|
     $|Options:
     $|  -h, --help  Print help

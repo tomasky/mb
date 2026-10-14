@@ -152,10 +152,15 @@ mb tool install denoland/deno        # any GitHub repository with releases
 mb tool install denoland/deno@2.9.7  # pinned to a release tag
 mb tool install https://github.com/BurntSushi/ripgrep
 mb tool install author/tool --moon 0.10.14 --bin-dir ~/.local/bin
-mb tool list                         # or: mb tool list --outdated
+mb tool ls                           # `ls` aliases `list`
+mb tool list --outdated
 mb tool upgrade author/tool          # one or more names, or --all
-mb tool uninstall author/tool        # one or more names, or --all
+mb tool rm author/tool               # `rm`/`remove` alias `uninstall`
 ```
+
+Every subcommand accepts short aliases (`install`/`add`, `upgrade`/`update`/`up`,
+`list`/`ls`, `uninstall`/`remove`/`rm`, and `list`/`ls` for `mb env` and
+`mb moon`).
 
 `mb tool install` resolves the name on mooncakes.io first. When the name is a
 registered module it prefers a **prebuilt binary from the module's GitHub
@@ -176,13 +181,19 @@ release** and only compiles from source when there is none:
    its SHA-256 against the registry checksum, extract it to
    `$MB_HOME/tool/<author>-<module>/<version>/src` and run
    `moon build --target native --release` with a managed (or system) toolchain;
-4. copy every executable into `~/.local/bin` (or the `--bin-dir <dir>` given).
+4. copy every executable into `$MB_HOME/tool/<author>-<module>/<version>/bin`
+   and create a **symlink** to it in `~/.local/bin` (or the `--bin-dir <dir>`
+   given), the way `uv` exposes tool executables.
 
 Executables are never clobbered silently: if a target name already exists in
-the bin directory (whether an unrelated file or another tool's binary),
+the bin directory (whether an unrelated file or another tool's symlink),
 `mb tool install` fails with `executable already exists: <name> (use --force to
-overwrite)`. Pass `--force` to replace it. `mb tool uninstall` only removes a
-binary when no other installed tool still provides it.
+overwrite)` and exits **2**, matching `uv`. Pass `--force` to replace it.
+
+Because the bin directory only holds symlinks into `$MB_HOME/tool/...`, the
+link target decides ownership: `mb tool uninstall` removes a link only when it
+still points into that tool version's directory, so a name that was taken over
+by another tool is left untouched. Upgrading just repoints the symlink.
 
 A name that is **not** on mooncakes.io is treated as a GitHub repository —
 `owner/repo`, `owner/repo@tag` or a full URL — and installed from its releases
@@ -190,10 +201,11 @@ the same way. It is recorded under the repository slug and the release tag.
 
 `mb tool list` prints the tools directory (`$MB_HOME/tool`), and for each tool
 the directory its binaries were installed into and any that are missing. With
-`--outdated` it consults mooncakes.io and marks tools that have a newer version;
-a GitHub-only tool is reported as unchecked, since it has no registry entry.
-`mb tool uninstall` removes the binaries from that same directory, so a tool
-installed with `--bin <dir>`/`--bin-dir <dir>` is cleaned up correctly too.
+`--outdated` it checks for a newer version: a mooncakes.io module is looked up
+in the registry, and a GitHub-only tool (one that is not a registered module)
+is checked against its repository's latest release. `mb tool uninstall` removes
+the symlinks from that same directory, so a tool installed with `--bin <dir>`/
+`--bin-dir <dir>` is cleaned up correctly too.
 
 `mb tool upgrade` takes one or more names (a version specifier is ignored and
 the latest version is installed) or `--all` for every installed tool; it always
@@ -219,7 +231,10 @@ $MB_HOME/
   moon/.default            # the selected version
   tool/<author>-<name>/<version>/
     src/                   # extracted mooncakes source
+    bin/                   # the installed executables
     tool.json              # { name, version, bins, bin }
+
+~/.local/bin/<name>        # symlink -> $MB_HOME/tool/.../bin/<name>
 
 ./.env                     # project env (values encrypted)
 ./.mbenv                   # optional second project env file

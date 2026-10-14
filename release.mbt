@@ -450,6 +450,7 @@ fn try_install_release(
   repository : String,
   requested : String?,
   bin : String,
+  dir : String,
   force : Bool,
 ) -> Array[String]? raise MbError {
   let repo = match parse_github_repo(repository) {
@@ -473,6 +474,7 @@ fn try_install_release(
       digest,
       short_name(name),
       bin,
+      dir,
       force,
     ),
   )
@@ -490,6 +492,7 @@ fn download_and_install_asset(
   digest : String?,
   fallback_name : String,
   bin : String,
+  dir : String,
   force : Bool,
 ) -> Array[String] raise MbError {
   println("Downloading " + url + " ...")
@@ -513,34 +516,28 @@ fn download_and_install_asset(
   }
   let installed : Array[String] = []
   if is_archive_name(asset_name) {
-    let dir = temp_path() + ".d"
-    extract_archive(tmp, asset_name, dir)
-    let found = collect_executables(dir)
+    let unpack = temp_path() + ".d"
+    extract_archive(tmp, asset_name, unpack)
+    let found = collect_executables(unpack)
     let names : Array[String] = []
     for (n, _) in found {
       names.push(n)
     }
-    ensure_bin_free(bin, names, force)
+    ensure_bin_free(bin, names, dir, force)
     for entry in found {
       let (bin_name, path) = entry
-      let dest = path_join(bin, bin_name)
-      copy_file(path, dest)
-      chmod_exec(dest)
+      stage_binary(dir, bin_name, path)
       installed.push(bin_name)
-      println("  installed " + dest)
     }
-    rm_rf(dir) catch {
+    rm_rf(unpack) catch {
       _ => ()
     }
   } else {
     let derived = binary_name_from_asset(asset_name)
     let bin_name = if derived == "" { fallback_name } else { derived }
-    ensure_bin_free(bin, [bin_name], force)
-    let dest = path_join(bin, bin_name)
-    copy_file(tmp, dest)
-    chmod_exec(dest)
+    ensure_bin_free(bin, [bin_name], dir, force)
+    stage_binary(dir, bin_name, tmp)
     installed.push(bin_name)
-    println("  installed " + dest)
   }
   rm_rf(tmp) catch {
     _ => ()
@@ -548,7 +545,20 @@ fn download_and_install_asset(
   if installed.is_empty() {
     raise MbError("no executable found in release asset " + asset_name)
   }
+  link_binaries(bin, dir, installed)
+  report_installed(bin, installed)
   installed
+}
+
+///|
+/// Latest release tag of a GitHub repository, or `None` when there is none or
+/// the API could not be reached.
+fn latest_github_tag(repo : String) -> String? {
+  match
+    github_json("https://api.github.com/repos/" + repo + "/releases/latest") {
+    Some(j) => json_string(j, "tag_name")
+    None => None
+  }
 }
 
 ///|
@@ -603,6 +613,7 @@ fn install_github_tool(
     digest,
     short_name(repo),
     bin,
+    dir,
     force,
   )
   let record : ToolMeta = { name: repo, version: tag, bins, bin: Some(bin), }

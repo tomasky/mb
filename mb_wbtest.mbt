@@ -230,16 +230,62 @@ test "ToolMeta json: legacy records without `bin` still parse" {
 
 ///|
 test "ensure_bin_free refuses to clobber existing executables" {
-  let dir = temp_path() + ".d"
-  mkdir_p(dir)
-  write_text(path_join(dir, "foo"), "x")
+  let bin = temp_path() + ".bin"
+  let tool = temp_path() + ".tool"
+  mkdir_p(bin)
+  mkdir_p(path_join(tool, "bin"))
+  write_text(path_join(bin, "foo"), "x")
   let mut refused = false
-  ensure_bin_free(dir, ["foo"], false) catch {
+  ensure_bin_free(bin, ["foo"], tool, false) catch {
     _ => refused = true
   }
   assert_true(refused)
   // `--force` overwrites, and an absent name is fine.
-  ensure_bin_free(dir, ["foo"], true)
-  ensure_bin_free(dir, ["bar"], false)
-  rm_rf(dir)
+  ensure_bin_free(bin, ["foo"], tool, true)
+  ensure_bin_free(bin, ["bar"], tool, false)
+  // A symlink pointing back into the tool directory is ours.
+  let own = path_join(bin, "own")
+  run_ok(
+    "ln -sfn " +
+    shell_quote(path_join(tool, "bin/own")) +
+    " " +
+    shell_quote(own),
+  )
+  |> ignore
+  ensure_bin_free(bin, ["own"], tool, false)
+  rm_rf(bin)
+  rm_rf(tool)
+}
+
+///|
+test "stage_binary and link_binaries point into the tool directory" {
+  let bin = temp_path() + ".bin"
+  let tool = temp_path() + ".tool"
+  let src = temp_path() + ".src"
+  write_text(src, "#!/bin/sh\n")
+  stage_binary(tool, "foo", src)
+  link_binaries(bin, tool, ["foo"])
+  let dest = path_join(bin, "foo")
+  let target = readlink(dest).unwrap()
+  assert_eq(target, path_join(path_join(tool, "bin"), "foo"))
+  assert_true(shim_points_into(target, tool))
+  rm_rf(bin)
+  rm_rf(tool)
+  rm_rf(src)
+}
+
+///|
+test "parse_http_code" {
+  assert_eq(parse_http_code("200"), 200)
+  assert_eq(parse_http_code("404\n"), 404)
+  assert_eq(parse_http_code("000"), 0)
+  assert_eq(parse_http_code(""), 0)
+}
+
+///|
+test "MbError exit codes" {
+  assert_eq(MbError("x").exit_code(), 1)
+  assert_eq(MbError("x").message(), "x")
+  assert_eq(Coded("boom", 2).exit_code(), 2)
+  assert_eq(Coded("boom", 2).message(), "boom")
 }

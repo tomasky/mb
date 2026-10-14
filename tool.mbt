@@ -63,18 +63,43 @@ fn split_spec(spec : String) -> (String, String?) raise MbError {
 
 ///|
 /// Fetch the registry manifest for a module, optionally pinned to a version.
-pub fn fetch_manifest(name : String, version : String?) -> Json raise MbError {
+///
+/// Returns `None` when the module is simply not in the registry (HTTP 404), and
+/// raises when the registry could not be reached, so a network failure is not
+/// mistaken for "this name is a GitHub repository".
+fn fetch_manifest_opt(name : String, version : String?) -> Json? raise MbError {
   let url = match version {
     Some(v) => MOONCAKES_API + "/api/v0/manifest/" + name + "@" + v
     None => MOONCAKES_API + "/api/v0/manifest/" + name
   }
-  let j = fetch_json(url) catch {
-    _ => raise MbError("module '" + name + "' was not found on mooncakes.io")
+  let (code, body) = http_get_status(url)
+  if code == 404 {
+    return None
+  }
+  if code == 0 {
+    raise MbError("could not reach mooncakes.io for '" + name + "'")
+  }
+  if code >= 400 {
+    raise MbError(
+      "mooncakes.io returned HTTP " + code.to_string() + " for '" + name + "'",
+    )
+  }
+  let j = @json.parse(body) catch {
+    _ => raise MbError("mooncakes.io returned invalid JSON for '" + name + "'")
   }
   match json_object(j, "metadata") {
-    Some(_) => j
+    Some(_) => Some(j)
     None =>
       raise MbError("mooncakes.io returned no metadata for '" + name + "'")
+  }
+}
+
+///|
+/// Fetch the registry manifest for a module, optionally pinned to a version.
+pub fn fetch_manifest(name : String, version : String?) -> Json raise MbError {
+  match fetch_manifest_opt(name, version) {
+    Some(j) => j
+    None => raise MbError("module '" + name + "' was not found on mooncakes.io")
   }
 }
 
@@ -115,23 +140,82 @@ pub fn discover_binaries(src : String) -> Array[(String, String)] raise MbError 
 }
 
 ///|
-/// Refuse to clobber executables that are already present in `bin` unless
-/// `force` is set, mirroring `uv tool install`. The check runs before anything
-/// is copied, so a conflict leaves the existing files untouched.
+/// Refuse to clobber an executable that belongs to something else unless
+/// `force` is set, mirroring `uv tool install`. A symlink pointing back into
+/// `dir` is one of ours and may be replaced. The check runs before anything is
+/// copied, so a conflict leaves the existing files untouched.
 fn ensure_bin_free(
   bin : String,
   names : Array[String],
+  dir : String,
   force : Bool,
 ) -> Unit raise MbError {
   if force {
     return
   }
   for name in names {
-    if path_exists(path_join(bin, name)) {
-      raise MbError(
-        "executable already exists: " + name + " (use --force to overwrite)",
-      )
+    let dest = path_join(bin, name)
+    match readlink(dest) {
+      Some(target) =>
+        if !shim_points_into(target, dir) {
+          raise Coded(
+            "executable already exists: " + name + " (use --force to overwrite)",
+            2,
+          )
+        }
+      None =>
+        if path_exists(dest) {
+          raise Coded(
+            "executable already exists: " + name + " (use --force to overwrite)",
+            2,
+          )
+        }
     }
+  }
+}
+
+///|
+/// Copy a built or downloaded executable into `<dir>/bin/<name>`, so the bin
+/// directory only ever holds symlinks into the tool directory.
+fn stage_binary(
+  dir : String,
+  name : String,
+  src : String,
+) -> Unit raise MbError {
+  let tbin = path_join(dir, "bin")
+  mkdir_p(tbin)
+  let dest = path_join(tbin, name)
+  copy_file(src, dest)
+  chmod_exec(dest)
+}
+
+///|
+/// Point `bin/<name>` at `<dir>/bin/<name>` for each installed executable.
+fn link_binaries(
+  bin : String,
+  dir : String,
+  names : Array[String],
+) -> Unit raise MbError {
+  mkdir_p(bin)
+  let tbin = path_join(dir, "bin")
+  for name in names {
+    let dest = path_join(bin, name)
+    if !run_ok(
+        "ln -sfn " +
+        shell_quote(path_join(tbin, name)) +
+        " " +
+        shell_quote(dest),
+      ) {
+      raise MbError("failed to link " + dest)
+    }
+  }
+}
+
+///|
+/// Print where each installed executable was linked.
+fn report_installed(bin : String, names : Array[String]) -> Unit {
+  for name in names {
+    println("  installed " + path_join(bin, name))
   }
 }
 
@@ -175,10 +259,9 @@ pub fn tool_install(
   println("Resolving " + name + " ...")
   // A name that is not on mooncakes.io is tried as a GitHub repository
   // (`owner/repo` or a URL) and installed from its releases.
-  let manifest = fetch_manifest(name, requested) catch { _ => Json::null() }
-  match manifest {
-    Null => return install_github_tool(spec, bin_dir, force)
-    _ => ()
+  let manifest = match fetch_manifest_opt(name, requested) {
+    Some(m) => m
+    None => return install_github_tool(spec, bin_dir, force)
   }
   let meta = match json_object(manifest, "metadata") {
     Some(m) => m
@@ -215,12 +298,16 @@ pub fn tool_install(
   }
   if repository != "" {
     let released = try_install_release(
-      resolved_name, version, repository, requested, bin_dir, force,
+      resolved_name, version, repository, requested, bin_dir, dir, force,
     ) catch {
-      e => {
-        eprintln("warning: " + e.message() + "; building from source instead")
-        None
-      }
+      e =>
+        // A conflict is fatal; only an unusable asset falls back to source.
+        if e is Coded(_, _) {
+          raise e
+        } else {
+          eprintln("warning: " + e.message() + "; building from source instead")
+          None
+        }
     }
     match released {
       Some(bins) => {
@@ -274,20 +361,16 @@ pub fn tool_install(
   for (n, _) in built {
     names.push(n)
   }
-  ensure_bin_free(bin_dir, names, force)
-  mkdir_p(bin_dir)
-  let installed : Array[String] = []
+  ensure_bin_free(bin_dir, names, dir, force)
   for (tool_name, path) in built {
-    let dest = path_join(bin_dir, tool_name)
-    copy_file(path, dest)
-    chmod_exec(dest)
-    installed.push(tool_name)
-    println("  installed " + dest)
+    stage_binary(dir, tool_name, path)
   }
+  link_binaries(bin_dir, dir, names)
+  report_installed(bin_dir, names)
   let record : ToolMeta = {
     name: resolved_name,
     version,
-    bins: installed,
+    bins: names,
     bin: Some(bin_dir),
   }
   write_text(
@@ -353,7 +436,10 @@ pub fn tool_list(outdated : Bool) -> Unit raise MbError {
   for t in tools {
     let mut line = "  " + t.name + " " + t.version
     if outdated {
-      let latest = latest_tool_version(t.name) catch { _ => "" }
+      let latest = match latest_tool_version_any(t.name) {
+        Some(v) => v
+        None => ""
+      }
       if latest == "" {
         line = line + "  (could not check for updates)"
       } else if latest != t.version {
@@ -390,27 +476,19 @@ pub fn tool_uninstall(spec : String) -> Unit raise MbError {
     if requested is Some(v) && v != t.version {
       continue
     }
-    // Remove from the directory the tool was actually installed into, but
-    // keep an executable that another installed tool still provides.
+    // Remove the symlinks that point into this version's directory. A link
+    // taken over by another tool (or a foreign file) is left alone, so the
+    // link target decides ownership.
     let bin = tool_bin_dir(t)
+    let dir = tool_dir(t.name, t.version)
     for b in t.bins {
-      let mut shared = false
-      for other in tools {
-        if other.name == t.name && other.version == t.version {
-          continue
-        }
-        if tool_bin_dir(other) == bin {
-          for ob in other.bins {
-            if ob == b {
-              shared = true
-            }
+      let dest = path_join(bin, b)
+      match readlink(dest) {
+        Some(target) =>
+          if shim_points_into(target, dir) {
+            run_ok("rm -f -- " + shell_quote(dest)) |> ignore
           }
-        }
-      }
-      if !shared {
-        rm_rf(path_join(bin, b)) catch {
-          _ => ()
-        }
+        None => ()
       }
     }
     rm_rf(tool_dir(t.name, t.version)) catch {
@@ -469,9 +547,10 @@ pub fn tool_upgrade(
     }
   }
   for t in wanted {
-    let latest = latest_tool_version(t.name) catch {
-      e => {
-        eprintln("warning: could not check " + t.name + ": " + e.message())
+    let latest = match latest_tool_version_any(t.name) {
+      Some(v) => v
+      None => {
+        eprintln("warning: could not check " + t.name + " for updates")
         continue
       }
     }
@@ -543,6 +622,20 @@ pub fn tool_uninstall_many(
 fn fst(pair : (String, String?)) -> String {
   let (a, _) = pair
   a
+}
+
+///|
+/// Latest version of an installed tool, whether it came from mooncakes.io or
+/// straight from a GitHub repository. `None` when neither source has a version.
+fn latest_tool_version_any(name : String) -> String? {
+  let from_registry = latest_tool_version(name) catch { _ => "" }
+  if from_registry != "" {
+    return Some(from_registry)
+  }
+  match parse_github_repo(name) {
+    Some(repo) => latest_github_tag(repo)
+    None => None
+  }
 }
 
 ///|

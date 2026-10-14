@@ -6,7 +6,7 @@ fn main {
   let code = @lib.run_cli(argv) catch {
     e => {
       eprintln("mb: " + e.message())
-      1
+      e.exit_code()
     }
   }
   @lib.exit(code)
