@@ -1,6 +1,6 @@
 {
   "name": "@tomasko/mb",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A MoonBit-native, uv-style toolchain and package manager: manage MoonBit toolchains and install tools from github and mooncakes.io.",
   "license": "Apache-2.0",
   "bin": {
