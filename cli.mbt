@@ -8,7 +8,7 @@
 /// or `--all`.
 
 ///|
-pub const MB_VERSION : String = "0.1.4"
+pub const MB_VERSION : String = "0.1.7"
 
 ///|
 fn tail(a : Array[String], from : Int) -> Array[String] {
@@ -16,7 +16,7 @@ fn tail(a : Array[String], from : Int) -> Array[String] {
 }
 
 ///|
-/// Entry point used by `cmd/main`. Returns the process exit code.
+/// Entry point used by `cmd/mb`. Returns the process exit code.
 pub fn run_cli(argv : Array[String]) -> Int raise MbError {
   if argv.is_empty() {
     print_help()

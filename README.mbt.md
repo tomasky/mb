@@ -29,7 +29,13 @@ Or with npm:
 pnpm install -g @tomasko/mb
 ```
 
-Both download the prebuilt binary from
+Or with the MoonBit toolchain, which builds from source into `~/.moon/bin`:
+
+```bash
+moon install kupas/mb/cmd/mb
+```
+
+The installer and the npm package download the prebuilt binary from
 [GitHub Releases](https://github.com/tomasky/mb/releases) for the current
 platform. See [Build](#build) to compile from source.
 
