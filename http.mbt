@@ -114,7 +114,7 @@ fn fetch_text_headers(
 
 ///|
 /// Parse the status code printed by `curl -w '%{http_code}'`.
-fn parse_http_code(raw : String) -> Int {
+fn parse_http_code(raw : String) -> Int32 {
   let mut n = 0
   let mut any = false
   for c in raw.trim().to_owned().to_array() {
@@ -135,7 +135,7 @@ fn parse_http_code(raw : String) -> Int {
 ///|
 /// GET `url` and return `(status_code, body)`. A status of `0` means the
 /// request could not be made at all (DNS, TLS, timeout, ...).
-fn http_get_status(url : String) -> (Int, String) raise MbError {
+fn http_get_status(url : String) -> (Int32, String) raise MbError {
   let tmp = temp_path()
   let cmd = "curl -sL --retry 3 --retry-delay 1 --connect-timeout 30 -o " +
     shell_quote(tmp) +

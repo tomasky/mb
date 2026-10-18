@@ -11,7 +11,7 @@
 /// `nonce (12) || tag (32) || ciphertext`.
 
 ///|
-fn hex_value(c : Char) -> Int? {
+fn hex_value(c : Char) -> Int32? {
   if c >= '0' && c <= '9' {
     Some(c.to_int() - '0'.to_int())
   } else if c >= 'a' && c <= 'f' {
@@ -42,7 +42,7 @@ fn hex_to_bytes(hex : String) -> Bytes? {
 }
 
 ///|
-fn bytes_slice(b : Bytes, start : Int, end : Int) -> Bytes {
+fn bytes_slice(b : Bytes, start : Int32, end : Int32) -> Bytes {
   let out : Array[Byte] = []
   let mut i = start
   while i < end {

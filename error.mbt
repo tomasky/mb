@@ -6,7 +6,7 @@ pub(all) suberror MbError {
   MbError(String)
   /// A failure that must exit with a specific status, mirroring uv (which
   /// exits 2, for example, when an executable would be clobbered).
-  Coded(String, Int)
+  Coded(String, Int32)
 }
 
 ///|
@@ -19,7 +19,7 @@ pub fn MbError::message(self : MbError) -> String {
 
 ///|
 /// Process exit status the CLI should use for this error.
-pub fn MbError::exit_code(self : MbError) -> Int {
+pub fn MbError::exit_code(self : MbError) -> Int32 {
   match self {
     MbError(_) => 1
     Coded(_, code) => code

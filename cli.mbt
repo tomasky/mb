@@ -8,16 +8,16 @@
 /// or `--all`.
 
 ///|
-pub const MB_VERSION : String = "0.1.7"
+pub const MB_VERSION : String = "0.1.9"
 
 ///|
-fn tail(a : Array[String], from : Int) -> Array[String] {
+fn tail(a : Array[String], from : Int32) -> Array[String] {
   a[from:].to_owned()
 }
 
 ///|
 /// Entry point used by `cmd/mb`. Returns the process exit code.
-pub fn run_cli(argv : Array[String]) -> Int raise MbError {
+pub fn run_cli(argv : Array[String]) -> Int32 raise MbError {
   if argv.is_empty() {
     print_help()
     return 0
@@ -49,7 +49,7 @@ pub fn run_cli(argv : Array[String]) -> Int raise MbError {
 }
 
 ///|
-fn cli_help(rest : Array[String]) -> Int {
+fn cli_help(rest : Array[String]) -> Int32 {
   match rest.get(0) {
     None => {
       print_help()
@@ -116,7 +116,7 @@ fn has_help_flag(args : Array[String]) -> Bool {
 
 ///|
 /// clap-style usage error: printed on stderr, exit code 2.
-fn usage_error(msg : String, usage : String) -> Int {
+fn usage_error(msg : String, usage : String) -> Int32 {
   eprintln("error: " + msg)
   eprintln("")
   eprintln("Usage: " + usage)
@@ -126,7 +126,7 @@ fn usage_error(msg : String, usage : String) -> Int {
 }
 
 ///|
-fn unknown_subcommand(usage : String, sub : String) -> Int {
+fn unknown_subcommand(usage : String, sub : String) -> Int32 {
   eprintln("error: unrecognized subcommand '" + sub + "'")
   eprintln("")
   eprintln("Usage: " + usage)
@@ -162,7 +162,7 @@ fn print_help() -> Unit {
 ///|
 /// `mb run` — mirrors `uv run`: everything after the subcommand's own options
 /// is passed straight through to the command.
-fn cli_run(args : Array[String]) -> Int raise MbError {
+fn cli_run(args : Array[String]) -> Int32 raise MbError {
   let mut moon = ""
   let mut i = 0
   while i < args.length() {
@@ -201,7 +201,7 @@ fn print_run_help() -> Unit {
 }
 
 ///|
-fn cli_moon(args : Array[String]) -> Int raise MbError {
+fn cli_moon(args : Array[String]) -> Int32 raise MbError {
   if args.is_empty() {
     print_moon_help()
     return 0
@@ -396,7 +396,7 @@ fn print_moon_latest_help() -> Unit {
 }
 
 ///|
-fn cli_tool(args : Array[String]) -> Int raise MbError {
+fn cli_tool(args : Array[String]) -> Int32 raise MbError {
   if args.is_empty() {
     print_tool_help()
     return 0
@@ -545,7 +545,7 @@ fn print_tool_uninstall_help() -> Unit {
 }
 
 ///|
-fn cli_env(args : Array[String]) -> Int raise MbError {
+fn cli_env(args : Array[String]) -> Int32 raise MbError {
   if args.is_empty() {
     print_env_help()
     return 0

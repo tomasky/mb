@@ -4,7 +4,10 @@
 
 ///|
 /// Run `cmd` with the toolchain environment. Returns the child exit code.
-pub fn cmd_run(moon_version : String, cmd : Array[String]) -> Int raise MbError {
+pub fn cmd_run(
+  moon_version : String,
+  cmd : Array[String],
+) -> Int32 raise MbError {
   if cmd.is_empty() {
     raise MbError("usage: mb run [--moon <version>] <command> [args...]")
   }
@@ -39,6 +42,6 @@ pub fn cmd_run(moon_version : String, cmd : Array[String]) -> Int raise MbError 
 
 ///|
 /// Terminate the process with `code`.
-pub fn exit(code : Int) -> Unit {
+pub fn exit(code : Int32) -> Unit {
   mb_exit(code)
 }

@@ -313,7 +313,7 @@ pub fn cstring(s : String) -> Bytes {
 
 ///|
 /// Run a shell command, inheriting stdio. Returns the exit code.
-pub fn run_status(cmd : String) -> Int {
+pub fn run_status(cmd : String) -> Int32 {
   mb_system(cstring(cmd))
 }
 
