@@ -87,7 +87,7 @@ fn strip_v(s : String) -> String {
 
 ///|
 /// Right-pad `s` with spaces to `width` (no-op when already wider).
-fn pad_right(s : String, width : Int) -> String {
+fn pad_right(s : String, width : Int32) -> String {
   let mut out = s
   while out.length() < width {
     out = out + " "
@@ -267,6 +267,10 @@ pub fn moon_install(arg : String, force : Bool) -> Unit raise MbError {
   for rel in walk_files(path_join(home, "bin")) {
     chmod_exec(path_join(path_join(home, "bin"), rel))
   }
+  // Create moonx symlink (moon binary detects argv[0] to act as moonx)
+  let moon_bin = path_join(home, "bin/moon")
+  let moonx_bin = path_join(home, "bin/moonx")
+  run_checked("ln -sfn " + shell_quote(moon_bin) + " " + shell_quote(moonx_bin))
   // Fetch and bundle the standard library so `moon build` works offline.
   println("Downloading core ...")
   let core_tar = temp_path()
