@@ -8,7 +8,7 @@ import {
 // Values
 pub const CLI_BASE : String = "https://cli.moonbitlang.com"
 
-pub const MB_VERSION : String = "0.1.9"
+pub const MB_VERSION : String = "0.2.0"
 
 pub const MOONCAKES_API : String = "https://mooncakes.io"
 
@@ -22,7 +22,7 @@ pub fn build_tool(String, ToolchainEnv) -> Array[(String, String)] raise MbError
 
 pub fn chmod_exec(String) -> Unit
 
-pub fn cmd_run(String, Array[String]) -> Int raise MbError
+pub fn cmd_run(String, Array[String]) -> Int32 raise MbError
 
 pub fn copy_file(String, String) -> Unit raise MbError
 
@@ -46,7 +46,7 @@ pub fn env_or(String, String) -> String
 
 pub fn env_prefix(ToolchainEnv) -> String
 
-pub fn exit(Int) -> Unit
+pub fn exit(Int32) -> Unit
 
 pub fn extract_tar_gz(String, String) -> Unit raise MbError
 
@@ -144,11 +144,11 @@ pub fn run_capture(String) -> String
 
 pub fn run_checked(String) -> Unit raise MbError
 
-pub fn run_cli(Array[String]) -> Int raise MbError
+pub fn run_cli(Array[String]) -> Int32 raise MbError
 
 pub fn run_ok(String) -> Bool
 
-pub fn run_status(String) -> Int
+pub fn run_status(String) -> Int32
 
 pub fn set_default_toolchain(String) -> Unit raise MbError
 
@@ -168,7 +168,7 @@ pub fn tool_bin_dir(ToolMeta) -> String raise MbError
 
 pub fn tool_dir(String, String) -> String raise MbError
 
-pub fn tool_install(String, String, String, Bool) -> Unit raise MbError
+pub fn tool_install(String, String, String, Bool, Bool) -> Unit raise MbError
 
 pub fn tool_list(Bool) -> Unit raise MbError
 
@@ -193,9 +193,9 @@ pub fn write_text(String, String) -> Unit raise MbError
 // Errors
 pub(all) suberror MbError {
   MbError(String)
-  Coded(String, Int)
+  Coded(String, Int32)
 }
-pub fn MbError::exit_code(Self) -> Int
+pub fn MbError::exit_code(Self) -> Int32
 pub fn MbError::message(Self) -> String
 
 // Types and methods
@@ -209,6 +209,7 @@ pub struct ToolInstallOpts {
   force : Bool
   bin : String
   moon : String
+  interactive : Bool
 }
 
 pub struct ToolMeta {

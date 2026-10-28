@@ -14,12 +14,26 @@ mb tool install bobzhang/zip
 
 The package itself contains only a small launcher. On install, `install.js`
 downloads the prebuilt `mb` binary for the current platform from GitHub
-Releases and writes it to `bin/mb`. The published `bin` entry (`bin/mb.js`)
-then spawns it, forwarding arguments, standard IO and the exit code.
+Releases into a per-user cache and links it at `bin/mb`. The published `bin`
+entry (`bin/mb.js`) then spawns it, forwarding arguments, standard IO and the
+exit code.
 
 The postinstall download is best-effort, and the launcher downloads the
 binary on first run if it is missing (for example when installing with
 `--ignore-scripts`, or when the release was not available yet).
+
+### Version fallback and cache pruning
+
+Binaries are cached under `$XDG_CACHE_HOME/mb/npm` (usually
+`~/.cache/mb/npm`), one file per version. If the GitHub release matching the
+npm package version has not been published yet, the wrapper falls back to the
+latest published release and records it under its **real** tag, so a `0.1.4`
+binary is never relabelled as `0.1.5`. The binary is used as-is and `mb
+--version` reports `0.1.4`.
+
+Each successful install prunes the cache to the **two newest** versions: after
+installing `0.1.5`, a cached `0.1.3` is deleted while `0.1.4` is kept as the
+previous fallback.
 
 Supported targets:
 
@@ -43,7 +57,7 @@ scripts unless the package is approved, so `postinstall` is skipped and
 
 ```
 npm warn install-scripts 1 package had install scripts blocked because they are not covered by allowScripts:
-npm warn install-scripts   @tomasko/mb@0.1.4 (postinstall: node install.js)
+npm warn install-scripts   @tomasko/mb@0.2.0 (postinstall: node install.js)
 mb: native binary not found at .../node_modules/@tomasko/mb/bin/mb
 ```
 
@@ -70,6 +84,7 @@ pnpm rebuild @tomasko/mb
 | `MB_REPO`            | `owner/repo` to download from                    |
 | `MB_VERSION`         | release version to download                      |
 | `MB_DOWNLOAD_BASE`   | full base URL (mirror), e.g. `https://host/assets` |
+| `MB_CACHE_DIR`       | binary cache directory (default: `~/.cache/mb/npm`) |
 | `MB_FORCE_DOWNLOAD`  | re-download even if the binary is present        |
 | `MB_SKIP_DOWNLOAD`   | skip the download entirely                       |
 

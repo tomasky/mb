@@ -252,6 +252,7 @@ pub fn tool_install(
   toolchain_override : String,
   bin_override : String,
   force : Bool,
+  interactive : Bool,
 ) -> Unit raise MbError {
   ensure_tools()
   let bin_dir = if bin_override != "" { bin_override } else { bin_dir() }
@@ -261,7 +262,7 @@ pub fn tool_install(
   // (`owner/repo` or a URL) and installed from its releases.
   let manifest = match fetch_manifest_opt(name, requested) {
     Some(m) => m
-    None => return install_github_tool(spec, bin_dir, force)
+    None => return install_github_tool(spec, bin_dir, force, interactive)
   }
   let meta = match json_object(manifest, "metadata") {
     Some(m) => m
@@ -298,7 +299,7 @@ pub fn tool_install(
   }
   if repository != "" {
     let released = try_install_release(
-      resolved_name, version, repository, requested, bin_dir, dir, force,
+      resolved_name, version, repository, requested, bin_dir, dir, force, interactive,
     ) catch {
       e =>
         // A conflict is fatal; only an unusable asset falls back to source.
@@ -356,14 +357,18 @@ pub fn tool_install(
   let tc = resolve_toolchain(toolchain_override)
   println("Building " + resolved_name + " " + version + " ...")
   let built = build_tool(src, tc)
-  // Install the binaries, refusing to clobber unrelated executables.
-  let names : Array[String] = []
+  // Install the binaries, refusing to clobber unrelated executables. With
+  // `-i`, let the user pick a subset when the module has several executables.
+  let all_names : Array[String] = []
   for (n, _) in built {
-    names.push(n)
+    all_names.push(n)
   }
+  let names = choose_names(all_names, interactive)
   ensure_bin_free(bin_dir, names, dir, force)
   for (tool_name, path) in built {
-    stage_binary(dir, tool_name, path)
+    if in_array(names, tool_name) {
+      stage_binary(dir, tool_name, path)
+    }
   }
   link_binaries(bin_dir, dir, names)
   report_installed(bin_dir, names)
@@ -563,6 +568,7 @@ pub fn tool_upgrade(
         toolchain_override,
         tool_bin_dir(t),
         true,
+        false,
       )
       rm_rf(tool_dir(t.name, t.version)) catch {
         _ => ()
