@@ -23,6 +23,22 @@ extern "C" fn mb_chmod_exec(path : Bytes) -> Int32 = "mb_chmod_exec"
 extern "C" fn mb_isatty_stdout() -> Int32 = "mb_isatty_stdout"
 
 ///|
+extern "C" fn mb_isatty_stdin() -> Int32 = "mb_isatty_stdin"
+
+///|
+#borrow(data)
+extern "C" fn mb_write(data : Bytes) -> Int32 = "mb_write"
+
+///|
+extern "C" fn mb_tty_raw() -> Int32 = "mb_tty_raw"
+
+///|
+extern "C" fn mb_tty_restore() -> Int32 = "mb_tty_restore"
+
+///|
+extern "C" fn mb_read_byte(timeout_ms : Int32) -> Int32 = "mb_read_byte"
+
+///|
 extern "C" fn mb_read_line() -> Bytes = "mb_read_line"
 
 ///|

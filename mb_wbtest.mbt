@@ -109,10 +109,23 @@ test "parse_tool_install_flags" {
   // The old --bin spelling still works.
   let o2 = parse_tool_install_flags(["a/b", "--bin=/tmp/c"]).unwrap()
   assert_eq(o2.bin, "/tmp/c")
+  // `-i` / `--interactive`.
+  assert_true(parse_tool_install_flags(["a/b", "-i"]).unwrap().interactive)
+  assert_true(
+    parse_tool_install_flags(["a/b", "--interactive"]).unwrap().interactive,
+  )
+  assert_false(parse_tool_install_flags(["a/b"]).unwrap().interactive)
   // Exactly one package is accepted, and it is required.
   assert_true(parse_tool_install_flags([]) is Err(_))
   assert_true(parse_tool_install_flags(["a/b", "c/d"]) is Err(_))
   assert_true(parse_tool_install_flags(["a/b", "--bogus"]) is Err(_))
+}
+
+///|
+test "choose_names without a prompt" {
+  // No `-i`, or a single candidate: no prompt, everything is installed.
+  assert_eq(choose_names(["foo", "bar"], false), ["foo", "bar"])
+  assert_eq(choose_names(["only"], true), ["only"])
 }
 
 ///|

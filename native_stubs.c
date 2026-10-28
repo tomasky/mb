@@ -7,8 +7,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "moonbit.h"
@@ -133,4 +135,79 @@ MOONBIT_FFI_EXPORT int mb_isatty_stdout(void) {
 // Terminate the process with `code`.
 MOONBIT_FFI_EXPORT void mb_exit(int code) {
   exit(code);
+}
+
+// Whether stdin is a terminal.
+MOONBIT_FFI_EXPORT int mb_isatty_stdin(void) {
+  return isatty(STDIN_FILENO) ? 1 : 0;
+}
+
+// Write bytes to stdout without a trailing newline. Returns bytes written.
+MOONBIT_FFI_EXPORT int mb_write(moonbit_bytes_t data) {
+  size_t len = (size_t)Moonbit_array_length(data);
+  if (len == 0) {
+    return 0;
+  }
+  fwrite(data, 1, len, stdout);
+  fflush(stdout);
+  return (int)len;
+}
+
+static struct termios mb_saved_termios;
+static int mb_raw_active = 0;
+
+// Put stdin into non-canonical, no-echo mode so a prompt can read single
+// keypresses. Returns 0 on success.
+MOONBIT_FFI_EXPORT int mb_tty_raw(void) {
+  if (mb_raw_active) {
+    return 0;
+  }
+  if (!isatty(STDIN_FILENO)) {
+    return -1;
+  }
+  if (tcgetattr(STDIN_FILENO, &mb_saved_termios) != 0) {
+    return -1;
+  }
+  struct termios raw = mb_saved_termios;
+  raw.c_lflag &= ~(ICANON | ECHO);
+  raw.c_cc[VMIN] = 1;
+  raw.c_cc[VTIME] = 0;
+  if (tcsetattr(STDIN_FILENO, TCSANOW, &raw) != 0) {
+    return -1;
+  }
+  mb_raw_active = 1;
+  return 0;
+}
+
+// Undo mb_tty_raw.
+MOONBIT_FFI_EXPORT int mb_tty_restore(void) {
+  if (!mb_raw_active) {
+    return 0;
+  }
+  int rc = tcsetattr(STDIN_FILENO, TCSANOW, &mb_saved_termios);
+  mb_raw_active = 0;
+  return rc;
+}
+
+// Read one byte from stdin. With timeout_ms > 0, wait at most that long.
+// Returns the byte (0..255), or -1 on timeout or EOF.
+MOONBIT_FFI_EXPORT int mb_read_byte(int timeout_ms) {
+  if (timeout_ms > 0) {
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    int ready = select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
+    if (ready <= 0) {
+      return -1;
+    }
+  }
+  unsigned char c;
+  ssize_t n = read(STDIN_FILENO, &c, 1);
+  if (n <= 0) {
+    return -1;
+  }
+  return (int)c;
 }

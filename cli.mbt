@@ -8,7 +8,7 @@
 /// or `--all`.
 
 ///|
-pub const MB_VERSION : String = "0.1.9"
+pub const MB_VERSION : String = "0.2.1"
 
 ///|
 fn tail(a : Array[String], from : Int32) -> Array[String] {
@@ -224,7 +224,7 @@ fn cli_moon(args : Array[String]) -> Int32 raise MbError {
         moon_list()
         0
       }
-    "install" | "add" =>
+    "install" | "add" | "i" =>
       match parse_version_flags(rest, "latest") {
         Err(e) => usage_error(e, "mb moon install [OPTIONS] [VERSION]")
         Ok((version, force)) => {
@@ -286,7 +286,7 @@ fn print_moon_help() -> Unit {
     $|
     $|Commands:
     $|  list (ls)                List installed and available toolchains
-    $|  install (add)            Install a MoonBit toolchain
+    $|  install (add, i)         Install a MoonBit toolchain
     $|  uninstall (remove, rm)   Remove an installed toolchain
     $|  default                  Set the default toolchain
     $|  which                    Print the path to a toolchain's `moon`
@@ -301,7 +301,7 @@ fn print_moon_help() -> Unit {
 fn print_moon_sub_help(sub : String) -> Unit {
   match sub {
     "list" | "ls" => print_moon_list_help()
-    "install" | "add" => print_moon_install_help()
+    "install" | "add" | "i" => print_moon_install_help()
     "uninstall" | "remove" | "rm" => print_moon_uninstall_help()
     "default" | "use" => print_moon_default_help()
     "which" => print_moon_which_help()
@@ -412,11 +412,11 @@ fn cli_tool(args : Array[String]) -> Int32 raise MbError {
     return 0
   }
   match sub {
-    "install" | "add" =>
+    "install" | "add" | "i" =>
       match parse_tool_install_flags(rest) {
         Err(e) => usage_error(e, "mb tool install [OPTIONS] <NAME>[@<VERSION>]")
         Ok(opt) => {
-          tool_install(opt.spec, opt.moon, opt.bin, opt.force)
+          tool_install(opt.spec, opt.moon, opt.bin, opt.force, opt.interactive)
           0
         }
       }
@@ -456,7 +456,7 @@ fn print_tool_help() -> Unit {
     $|Usage: mb tool [OPTIONS] <COMMAND>
     $|
     $|Commands:
-    $|  install (add)              Install a tool from a mooncakes.io module
+    $|  install (add, i)           Install a tool from a mooncakes.io module
     $|  upgrade (update, up)       Upgrade installed tools to their latest version
     $|  list (ls)                  List installed tools
     $|  uninstall (remove, rm)     Remove an installed tool
@@ -469,7 +469,7 @@ fn print_tool_help() -> Unit {
 ///|
 fn print_tool_sub_help(sub : String) -> Unit {
   match sub {
-    "install" | "add" => print_tool_install_help()
+    "install" | "add" | "i" => print_tool_install_help()
     "upgrade" | "update" | "up" => print_tool_upgrade_help()
     "list" | "ls" => print_tool_list_help()
     "uninstall" | "remove" | "rm" => print_tool_uninstall_help()
@@ -490,6 +490,7 @@ fn print_tool_install_help() -> Unit {
     $|
     $|Options:
     $|  -f, --force          Force (re)installation even if already installed
+    $|  -i, --interactive    Choose which executables to install (esc cancels)
     $|      --bin <DIR>      Install executables into DIR (default: ~/.local/bin)
     $|      --bin-dir <DIR>  Alias for --bin
     $|      --moon <VERSION> Build with the given managed MoonBit toolchain
@@ -838,6 +839,7 @@ pub struct ToolInstallOpts {
   force : Bool
   bin : String
   moon : String
+  interactive : Bool
 }
 
 ///|
@@ -848,11 +850,15 @@ fn parse_tool_install_flags(
   let mut force = false
   let mut bin = ""
   let mut moon = ""
+  let mut interactive = false
   let mut i = 0
   while i < args.length() {
     let a = args[i]
     if a == "--force" || a == "-f" {
       force = true
+      i = i + 1
+    } else if a == "--interactive" || a == "-i" {
+      interactive = true
       i = i + 1
     } else if a == "--bin" || a == "--bin-dir" {
       if i + 1 >= args.length() {
@@ -891,7 +897,7 @@ fn parse_tool_install_flags(
   if spec == "" {
     return Err("the following required argument was not provided:\n  <NAME>")
   }
-  Ok({ spec, force, bin, moon, })
+  Ok({ spec, force, bin, moon, interactive, })
 }
 
 ///|

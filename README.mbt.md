@@ -158,15 +158,16 @@ mb tool install denoland/deno        # any GitHub repository with releases
 mb tool install denoland/deno@2.9.7  # pinned to a release tag
 mb tool install https://github.com/BurntSushi/ripgrep
 mb tool install author/tool --moon 0.10.14 --bin-dir ~/.local/bin
+mb tool install author/tool -i       # choose which executables to install
 mb tool ls                           # `ls` aliases `list`
 mb tool list --outdated
 mb tool upgrade author/tool          # one or more names, or --all
 mb tool rm author/tool               # `rm`/`remove` alias `uninstall`
 ```
 
-Every subcommand accepts short aliases (`install`/`add`, `upgrade`/`update`/`up`,
-`list`/`ls`, `uninstall`/`remove`/`rm`, and `list`/`ls` for `mb env` and
-`mb moon`).
+Every subcommand accepts short aliases (`install`/`add`/`i`,
+`upgrade`/`update`/`up`, `list`/`ls`, `uninstall`/`remove`/`rm`, and
+`list`/`ls` for `mb env` and `mb moon`).
 
 `mb tool install` resolves the name on mooncakes.io first. When the name is a
 registered module it prefers a **prebuilt binary from the module's GitHub
@@ -195,6 +196,12 @@ Executables are never clobbered silently: if a target name already exists in
 the bin directory (whether an unrelated file or another tool's symlink),
 `mb tool install` fails with `executable already exists: <name> (use --force to
 overwrite)` and exits **2**, matching `uv`. Pass `--force` to replace it.
+
+With `-i`/`--interactive`, a tool that publishes several executables prompts
+with a checkbox list instead of installing all of them: `space` toggles,
+`up`/`down` (or `j`/`k`) move, `a` toggles everything, `enter` confirms and
+`esc` cancels the installation. `-i` needs a real terminal; a non-interactive
+invocation reports the candidate names instead of guessing.
 
 Because the bin directory only holds symlinks into `$MB_HOME/tool/...`, the
 link target decides ownership: `mb tool uninstall` removes a link only when it
@@ -256,7 +263,7 @@ $MB_HOME/
   `.sha256` checksums) to a GitHub Release when a `v*` tag is pushed:
 
   ```bash
-  git tag v0.1.4 && git push origin v0.1.4
+  git tag v0.2.1 && git push origin v0.2.1
   ```
 
 - `npmjs/` is an npm wrapper. `pnpm install -g @tomasko/mb` downloads the matching

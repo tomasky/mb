@@ -452,6 +452,7 @@ fn try_install_release(
   bin : String,
   dir : String,
   force : Bool,
+  interactive : Bool,
 ) -> Array[String]? raise MbError {
   let repo = match parse_github_repo(repository) {
     Some(r) => r
@@ -476,6 +477,7 @@ fn try_install_release(
       bin,
       dir,
       force,
+      interactive,
     ),
   )
 }
@@ -494,6 +496,7 @@ fn download_and_install_asset(
   bin : String,
   dir : String,
   force : Bool,
+  interactive : Bool,
 ) -> Array[String] raise MbError {
   println("Downloading " + url + " ...")
   let tmp = temp_path()
@@ -519,15 +522,18 @@ fn download_and_install_asset(
     let unpack = temp_path() + ".d"
     extract_archive(tmp, asset_name, unpack)
     let found = collect_executables(unpack)
-    let names : Array[String] = []
+    let all_names : Array[String] = []
     for (n, _) in found {
-      names.push(n)
+      all_names.push(n)
     }
+    let names = choose_names(all_names, interactive)
     ensure_bin_free(bin, names, dir, force)
     for entry in found {
       let (bin_name, path) = entry
-      stage_binary(dir, bin_name, path)
-      installed.push(bin_name)
+      if in_array(names, bin_name) {
+        stage_binary(dir, bin_name, path)
+        installed.push(bin_name)
+      }
     }
     rm_rf(unpack) catch {
       _ => ()
@@ -570,6 +576,7 @@ fn install_github_tool(
   spec : String,
   bin : String,
   force : Bool,
+  interactive : Bool,
 ) -> Unit raise MbError {
   let (repo, requested) = match parse_github_spec(spec) {
     Some(p) => p
@@ -615,6 +622,7 @@ fn install_github_tool(
     bin,
     dir,
     force,
+    interactive,
   )
   let record : ToolMeta = { name: repo, version: tag, bins, bin: Some(bin), }
   write_text(

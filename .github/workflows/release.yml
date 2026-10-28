@@ -3,7 +3,7 @@ name: release
 # Builds `mb` for every supported target and attaches the binaries to a
 # GitHub Release. The npm package in `npmjs/` downloads these assets.
 #
-#   git tag v0.1.4 && git push origin v0.1.4
+#   git tag v0.2.1 && git push origin v0.2.1
 
 on:
   push:
@@ -49,7 +49,9 @@ jobs:
         if: matrix.musl
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          # linux-libc-dev supplies the UAPI headers the MoonBit runtime needs
+          # (<linux/fs.h>, <linux/version.h>); musl-tools alone has none.
+          sudo apt-get install -y musl-tools linux-libc-dev
 
       # The MoonBit runtime's arm64 simdutf.o is compiled against glibc
       # headers and references `__memcpy_chk`; musl provides no `*_chk`
@@ -101,9 +103,17 @@ jobs:
         run: |
           cat > /tmp/mb-cc/mb-musl-gcc <<'EOF'
           #!/bin/sh
+          # musl-gcc searches only musl's include tree. The MoonBit runtime's C
+          # sources need the Linux UAPI headers (<linux/fs.h>,
+          # <linux/version.h>) and NAME_MAX from <limits.h> (glibc leaks it in
+          # through <unistd.h>/<dirent.h>, musl does not). `-idirafter` keeps
+          # musl's own headers ahead of the glibc ones, and `-include limits.h`
+          # makes NAME_MAX visible.
+          multi="$(gcc -print-multiarch 2>/dev/null)"
           for arg in "$@"; do
             if [ "$arg" = "-c" ]; then
-              exec musl-gcc "$@"
+              exec musl-gcc -include limits.h \
+                -idirafter /usr/include -idirafter "/usr/include/$multi" "$@"
             fi
           done
           exec musl-gcc "$@" -static -L/tmp/mb-cc -lmbfortify
