@@ -8,7 +8,7 @@ import {
 // Values
 pub const CLI_BASE : String = "https://cli.moonbitlang.com"
 
-pub const MB_VERSION : String = "0.2.1"
+pub const MB_VERSION : String = "0.2.2"
 
 pub const MOONCAKES_API : String = "https://mooncakes.io"
 
@@ -21,6 +21,8 @@ pub fn bin_dir() -> String raise MbError
 pub fn build_tool(String, ToolchainEnv) -> Array[(String, String)] raise MbError
 
 pub fn chmod_exec(String) -> Unit
+
+pub fn chmod_private(String) -> Unit
 
 pub fn cmd_run(String, Array[String]) -> Int32 raise MbError
 
@@ -56,9 +58,9 @@ pub fn fail(String) -> Unit raise MbError
 
 pub fn fetch_bytes(String) -> Bytes raise MbError
 
-pub fn fetch_json(String) -> Json raise MbError
+pub fn fetch_json(String) -> @json.Json raise MbError
 
-pub fn fetch_manifest(String, String?) -> Json raise MbError
+pub fn fetch_manifest(String, String?) -> @json.Json raise MbError
 
 pub fn fetch_text(String) -> String raise MbError
 
@@ -76,15 +78,15 @@ pub fn is_executable_file(String) -> Bool
 
 pub fn is_tty() -> Bool
 
-pub fn json_array(Json, String) -> Array[Json]?
+pub fn json_array(@json.Json, String) -> Array[@json.Json]?
 
-pub fn json_bool(Json, String) -> Bool?
+pub fn json_bool(@json.Json, String) -> Bool?
 
-pub fn json_field(Json, String) -> Json?
+pub fn json_field(@json.Json, String) -> @json.Json?
 
-pub fn json_object(Json, String) -> Json?
+pub fn json_object(@json.Json, String) -> @json.Json?
 
-pub fn json_string(Json, String) -> String?
+pub fn json_string(@json.Json, String) -> String?
 
 pub fn latest_moon_cli_version() -> String? raise MbError
 
@@ -116,7 +118,7 @@ pub fn moon_which(String) -> Unit raise MbError
 
 pub fn parent_dir(String) -> String
 
-pub fn parse_version_items(Json) -> Array[(String, String)]
+pub fn parse_version_items(@json.Json) -> Array[(String, String)]
 
 pub fn path_exists(String) -> Bool
 
@@ -162,6 +164,8 @@ pub fn sync_default_shims() -> Unit raise MbError
 
 pub fn system_toolchain() -> ToolchainEnv?
 
+pub fn temp_dir() -> String raise MbError
+
 pub fn temp_path() -> String raise MbError
 
 pub fn tool_bin_dir(ToolMeta) -> String raise MbError
@@ -183,6 +187,8 @@ pub fn tool_upgrade(Array[String], Bool, String) -> Unit raise MbError
 pub fn toolchain_complete(String) -> Bool raise MbError
 
 pub fn toolchain_dir(String) -> String raise MbError
+
+pub fn try_remove(String) -> Unit
 
 pub fn walk_files(String) -> Array[String] raise MbError
 
@@ -212,14 +218,15 @@ pub struct ToolInstallOpts {
   interactive : Bool
 }
 
+#derive(@json.FromJson, @json.ToJson)
 pub struct ToolMeta {
   name : String
   version : String
   bins : Array[String]
   bin : String?
-} derive(ToJson, @json.FromJson)
-pub fn ToolMeta::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ToolMeta::to_json(Self) -> Json
+}
+pub fn ToolMeta::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ToolMeta::to_json(Self) -> @json.Json
 
 pub struct ToolchainEnv {
   moon : String

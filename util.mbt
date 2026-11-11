@@ -263,8 +263,11 @@ pub fn chmod_exec(path : String) -> Unit {
 ///|
 /// True when the file is a native *executable* (ELF or Mach-O), as opposed
 /// to a relocatable object file which shares the same leading magic.
+///
+/// Only the first bytes are read: an archive can hold binaries of many
+/// megabytes and the magic lives in the first 20 bytes.
 pub fn is_executable_file(path : String) -> Bool {
-  let data = read_bytes(path) catch { _ => return false }
+  let data = mb_read_head(cstring(path), 20)
   if data.length() < 20 {
     return false
   }
@@ -348,6 +351,21 @@ pub fn shell_quote(s : String) -> String {
 /// SHA-256 of `data` as a lowercase hex string.
 pub fn sha256_hex(data : Bytes) -> String {
   @crypto.bytes_to_hex_string(@crypto.sha256(data))
+}
+
+///|
+/// Remove a file or directory, ignoring failures. Used on cleanup paths where
+/// the original error is the one worth reporting.
+pub fn try_remove(path : String) -> Unit {
+  rm_rf(path) catch {
+    _ => ()
+  }
+}
+
+///|
+/// Restrict a file to its owner (`chmod 0600`), for files holding secrets.
+pub fn chmod_private(path : String) -> Unit {
+  ignore(mb_chmod_private(cstring(path)))
 }
 
 ///|

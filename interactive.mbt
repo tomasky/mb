@@ -72,21 +72,34 @@ fn select_executables(names : Array[String]) -> Array[String]? {
   if n == 0 {
     return Some([])
   }
-  let selected : Array[Bool] = Array::make(n, true)
-  let mut cursor = 0
   if mb_tty_raw() != 0 {
     return None
   }
+  let result = run_select(names, Array::make(n, true), 0)
+  clear_select(n)
+  write_raw("\u{1B}[?25h")
+  ignore(mb_tty_restore())
+  result
+}
+
+///|
+/// The key loop behind `select_executables`, run while the terminal is raw.
+fn run_select(
+  names : Array[String],
+  selected : Array[Bool],
+  start_cursor : Int32,
+) -> Array[String]? {
+  let n = names.length()
+  let mut cursor = start_cursor
   write_raw("\u{1B}[?25l")
   render_select(names, selected, cursor, false)
-  let mut result : Array[String]? = None
   while true {
     let key = mb_read_byte(0)
-    if key == -1 {
-      result = None
-      break
-    } else if key == 27 {
-      // ESC: either a lone cancel or the start of an arrow-key sequence.
+    if key == -1 || key == 27 || key == 3 {
+      // EOF, ESC or Ctrl-C. ESC may also start an arrow-key sequence.
+      if key != 27 {
+        return None
+      }
       let next = mb_read_byte(50)
       if next == 91 {
         let code = mb_read_byte(50)
@@ -96,8 +109,7 @@ fn select_executables(names : Array[String]) -> Array[String]? {
           cursor = (cursor + 1) % n
         }
       } else {
-        result = None
-        break
+        return None
       }
     } else if key == 32 {
       selected[cursor] = !selected[cursor]
@@ -109,8 +121,7 @@ fn select_executables(names : Array[String]) -> Array[String]? {
             picked.push(name)
           }
         }
-        result = Some(picked)
-        break
+        return Some(picked)
       }
     } else if key == 97 || key == 65 {
       // 'a' / 'A': toggle everything.
@@ -125,10 +136,7 @@ fn select_executables(names : Array[String]) -> Array[String]? {
     }
     render_select(names, selected, cursor, true)
   }
-  clear_select(n)
-  write_raw("\u{1B}[?25h")
-  ignore(mb_tty_restore())
-  result
+  None
 }
 
 ///|

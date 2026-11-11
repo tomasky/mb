@@ -18,6 +18,17 @@ pub fn temp_path() -> String raise MbError {
 }
 
 ///|
+/// Create a unique temporary directory and return its path.
+pub fn temp_dir() -> String raise MbError {
+  let out = run_capture("mktemp -d \"${TMPDIR:-/tmp}/mb.XXXXXX\"")
+  let path = out.trim().to_owned()
+  if path == "" || !dir_exists(path) {
+    raise MbError("failed to create a temporary directory")
+  }
+  path
+}
+
+///|
 /// Verify the external programs `mb` relies on are present.
 pub fn ensure_tools() -> Unit raise MbError {
   let missing = []
@@ -63,15 +74,49 @@ pub fn download(
 }
 
 ///|
+/// Read a temporary download and always remove it afterwards, so a failure
+/// while reading does not leak the file.
+fn take_temp(tmp : String) -> Bytes raise MbError {
+  let data = read_bytes(tmp) catch {
+    MbError(m) => {
+      try_remove(tmp)
+      raise MbError(m)
+    }
+    Coded(m, c) => {
+      try_remove(tmp)
+      raise Coded(m, c)
+    }
+  }
+  try_remove(tmp)
+  data
+}
+
+///|
 /// Fetch `url` and return the response body as bytes.
 pub fn fetch_bytes(url : String) -> Bytes raise MbError {
   let tmp = temp_path()
-  download(url, tmp, false)
-  let data = read_bytes(tmp)
-  rm_rf(tmp) catch {
-    _ => ()
+  fetch_to_temp(url, tmp, "")
+  take_temp(tmp)
+}
+
+///|
+/// Download `url` to `dest` with quiet curl options, cleaning up on failure.
+fn fetch_to_temp(
+  url : String,
+  dest : String,
+  extra : String,
+) -> Unit raise MbError {
+  let cmd = "curl -fL -s" +
+    extra +
+    " --retry 3 --retry-delay 1 --connect-timeout 30 -o " +
+    shell_quote(dest) +
+    " " +
+    shell_quote(url)
+  let code = run_status(cmd)
+  if code != 0 {
+    try_remove(dest)
+    raise MbError("failed to fetch " + url + " (curl exit \{code})")
   }
-  data
 }
 
 ///|
@@ -92,24 +137,8 @@ fn fetch_text_headers(
   for h in headers {
     extra = extra + " -H " + shell_quote(h)
   }
-  let cmd = "curl -fL -s" +
-    extra +
-    " --retry 3 --retry-delay 1 --connect-timeout 30 -o " +
-    shell_quote(tmp) +
-    " " +
-    shell_quote(url)
-  let code = run_status(cmd)
-  if code != 0 {
-    rm_rf(tmp) catch {
-      _ => ()
-    }
-    raise MbError("failed to fetch " + url + " (curl exit \{code})")
-  }
-  let data = read_bytes(tmp)
-  rm_rf(tmp) catch {
-    _ => ()
-  }
-  @utf8.decode_lossy(data)
+  fetch_to_temp(url, tmp, extra)
+  @utf8.decode_lossy(take_temp(tmp))
 }
 
 ///|
@@ -142,10 +171,8 @@ fn http_get_status(url : String) -> (Int32, String) raise MbError {
     " -w '%{http_code}' " +
     shell_quote(url)
   let code = parse_http_code(run_capture(cmd))
-  let body = read_text(tmp) catch { _ => "" }
-  rm_rf(tmp) catch {
-    _ => ()
-  }
+  let body = read_text(tmp) catch { MbError(_) | Coded(_, _) => "" }
+  try_remove(tmp)
   (code, body)
 }
 

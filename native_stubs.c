@@ -169,7 +169,10 @@ MOONBIT_FFI_EXPORT int mb_tty_raw(void) {
     return -1;
   }
   struct termios raw = mb_saved_termios;
-  raw.c_lflag &= ~(ICANON | ECHO);
+  // ISIG is cleared as well: with it on, Ctrl-C kills the process before it can
+  // restore the terminal, leaving the shell in no-echo mode. Pressing Ctrl-C is
+  // reported as byte 3 instead, which the caller treats as "cancel".
+  raw.c_lflag &= ~(ICANON | ECHO | ISIG);
   raw.c_cc[VMIN] = 1;
   raw.c_cc[VTIME] = 0;
   if (tcsetattr(STDIN_FILENO, TCSANOW, &raw) != 0) {
@@ -210,4 +213,34 @@ MOONBIT_FFI_EXPORT int mb_read_byte(int timeout_ms) {
     return -1;
   }
   return (int)c;
+}
+
+// chmod to 0600, for files that hold secrets (the env encryption key).
+MOONBIT_FFI_EXPORT int mb_chmod_private(moonbit_bytes_t path) {
+  return chmod((const char *)path, 0600);
+}
+
+// Read at most `limit` bytes from the start of a file. Returns an empty string
+// when the file cannot be opened. Used to sniff executable magic bytes without
+// reading a whole (possibly huge) binary.
+MOONBIT_FFI_EXPORT moonbit_bytes_t mb_read_head(moonbit_bytes_t path,
+                                                int32_t limit) {
+  if (limit <= 0) {
+    return moonbit_make_bytes(0, 0);
+  }
+  FILE *fp = fopen((const char *)path, "rb");
+  if (fp == NULL) {
+    return moonbit_make_bytes(0, 0);
+  }
+  char *buf = (char *)malloc((size_t)limit);
+  if (buf == NULL) {
+    fclose(fp);
+    return moonbit_make_bytes(0, 0);
+  }
+  size_t n = fread(buf, 1, (size_t)limit, fp);
+  fclose(fp);
+  moonbit_bytes_t out = moonbit_make_bytes((int32_t)n, 0);
+  memcpy(out, buf, n);
+  free(buf);
+  return out;
 }

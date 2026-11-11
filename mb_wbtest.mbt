@@ -302,3 +302,71 @@ test "MbError exit codes" {
   assert_eq(Coded("boom", 2).exit_code(), 2)
   assert_eq(Coded("boom", 2).message(), "boom")
 }
+
+///|
+test "reinstalling with fewer executables prunes stale links" {
+  let bin = temp_path() + ".bin"
+  let tool = temp_path() + ".tool"
+  let src = temp_path() + ".src"
+  write_text(src, "#!/bin/sh\n")
+  stage_binary(tool, "one", src)
+  stage_binary(tool, "two", src)
+  link_binaries(bin, tool, ["one", "two"])
+  assert_true(path_exists(path_join(bin, "two")))
+  // A second install that only ships "one" must drop the old "two" link and
+  // its staged copy.
+  reset_staged(tool)
+  stage_binary(tool, "one", src)
+  link_binaries(bin, tool, ["one"])
+  assert_true(path_exists(path_join(bin, "one")))
+  assert_false(path_exists(path_join(bin, "two")))
+  assert_false(path_exists(path_join(path_join(tool, "bin"), "two")))
+  rm_rf(bin)
+  rm_rf(tool)
+  rm_rf(src)
+}
+
+///|
+test "is_executable_file sniffs the file header only" {
+  let exe = temp_path()
+  // Only the first 20 bytes matter: a bogus ELF header followed by garbage
+  // must still be recognised.
+  let head : Array[Byte] = [
+    0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x02, 0x00, 0x3e, 0x00,
+  ]
+  write_bytes(exe, Bytes::from_array(head) + Bytes::make(4096, (7).to_byte()))
+  assert_true(is_executable_file(exe))
+  let text = temp_path()
+  write_text(text, "#!not-an-elf\n")
+  assert_false(is_executable_file(text))
+  try_remove(exe)
+  try_remove(text)
+}
+
+///|
+test "temp_dir creates a real directory" {
+  let d = temp_dir()
+  assert_true(dir_exists(d))
+  try_remove(d)
+  assert_false(dir_exists(d))
+}
+
+///|
+test "chmod_private restricts the file to its owner" {
+  let f = temp_path()
+  write_text(f, "secret\n")
+  chmod_private(f)
+  let mode = run_capture("stat -c '%a' " + shell_quote(f)).trim().to_owned()
+  // macOS stat uses -f; only assert where GNU stat is available.
+  if mode != "" && mode.length() <= 4 {
+    assert_eq(mode, "600")
+  }
+  try_remove(f)
+}
+
+///|
+test "parse_names_flags requires a value for --moon" {
+  assert_true(parse_names_flags(["a/b", "--moon"]) is Err(_))
+  assert_true(parse_names_flags(["--all", "--moon=latest"]) is Ok(_))
+}

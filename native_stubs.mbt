@@ -39,6 +39,14 @@ extern "C" fn mb_tty_restore() -> Int32 = "mb_tty_restore"
 extern "C" fn mb_read_byte(timeout_ms : Int32) -> Int32 = "mb_read_byte"
 
 ///|
+#borrow(path)
+extern "C" fn mb_chmod_private(path : Bytes) -> Int32 = "mb_chmod_private"
+
+///|
+#borrow(path)
+extern "C" fn mb_read_head(path : Bytes, limit : Int32) -> Bytes = "mb_read_head"
+
+///|
 extern "C" fn mb_read_line() -> Bytes = "mb_read_line"
 
 ///|

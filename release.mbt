@@ -500,59 +500,109 @@ fn download_and_install_asset(
 ) -> Array[String] raise MbError {
   println("Downloading " + url + " ...")
   let tmp = temp_path()
+  let installed = install_from_asset(
+    asset_name, url, digest, fallback_name, bin, dir, force, interactive, tmp,
+  ) catch {
+    MbError(m) => {
+      try_remove(tmp)
+      raise MbError(m)
+    }
+    Coded(m, c) => {
+      try_remove(tmp)
+      raise Coded(m, c)
+    }
+  }
+  try_remove(tmp)
+  installed
+}
+
+///|
+/// Download `url` into `tmp` and install the executables it contains. Kept
+/// separate from `download_and_install_asset` so the caller can remove `tmp`
+/// on every failure path, including the checksum check.
+fn install_from_asset(
+  asset_name : String,
+  url : String,
+  digest : String?,
+  fallback_name : String,
+  bin : String,
+  dir : String,
+  force : Bool,
+  interactive : Bool,
+  tmp : String,
+) -> Array[String] raise MbError {
   download(url, tmp, true)
   match digest {
     Some(d) =>
       match sha256_of_digest(d) {
-        Some(expected) => {
-          let actual = sha256_hex(read_bytes(tmp))
-          if actual != expected {
-            rm_rf(tmp) catch {
-              _ => ()
-            }
+        Some(expected) =>
+          if sha256_hex(read_bytes(tmp)) != expected {
             raise MbError("checksum mismatch for " + asset_name)
           }
-        }
         None => ()
       }
     None => ()
   }
-  let installed : Array[String] = []
-  if is_archive_name(asset_name) {
-    let unpack = temp_path() + ".d"
-    extract_archive(tmp, asset_name, unpack)
-    let found = collect_executables(unpack)
-    let all_names : Array[String] = []
-    for (n, _) in found {
-      all_names.push(n)
-    }
-    let names = choose_names(all_names, interactive)
-    ensure_bin_free(bin, names, dir, force)
-    for entry in found {
-      let (bin_name, path) = entry
-      if in_array(names, bin_name) {
-        stage_binary(dir, bin_name, path)
-        installed.push(bin_name)
+  let installed = if is_archive_name(asset_name) {
+    let unpack = temp_dir()
+    let names = extract_and_stage(
+      asset_name, tmp, unpack, bin, dir, force, interactive,
+    ) catch {
+      MbError(m) => {
+        try_remove(unpack)
+        raise MbError(m)
+      }
+      Coded(m, c) => {
+        try_remove(unpack)
+        raise Coded(m, c)
       }
     }
-    rm_rf(unpack) catch {
-      _ => ()
-    }
+    try_remove(unpack)
+    names
   } else {
     let derived = binary_name_from_asset(asset_name)
     let bin_name = if derived == "" { fallback_name } else { derived }
     ensure_bin_free(bin, [bin_name], dir, force)
+    reset_staged(dir)
     stage_binary(dir, bin_name, tmp)
-    installed.push(bin_name)
-  }
-  rm_rf(tmp) catch {
-    _ => ()
+    [bin_name]
   }
   if installed.is_empty() {
     raise MbError("no executable found in release asset " + asset_name)
   }
   link_binaries(bin, dir, installed)
   report_installed(bin, installed)
+  installed
+}
+
+///|
+/// Unpack a downloaded archive and stage the chosen executables into `dir`.
+fn extract_and_stage(
+  asset_name : String,
+  archive : String,
+  unpack : String,
+  bin : String,
+  dir : String,
+  force : Bool,
+  interactive : Bool,
+) -> Array[String] raise MbError {
+  extract_archive(archive, asset_name, unpack)
+  let found = collect_executables(unpack)
+  let all_names : Array[String] = []
+  for (n, _) in found {
+    all_names.push(n)
+  }
+  let names = choose_names(all_names, interactive)
+  ensure_bin_free(bin, names, dir, force)
+  reset_staged(dir)
+  let installed : Array[String] = []
+  for entry in found {
+    let (bin_name, path) = entry
+    if in_array(names, bin_name) {
+      stage_binary(dir, bin_name, path)
+      installed.push(bin_name)
+    }
+  }
   installed
 }
 

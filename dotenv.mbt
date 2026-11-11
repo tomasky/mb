@@ -206,7 +206,10 @@ fn write_global_env(
     lines.push(format_dotenv_line(k, v))
   }
   let body = if lines.is_empty() { "" } else { lines.join("\n") + "\n" }
-  write_text(global_env_file(), body)
+  let path = global_env_file()
+  write_text(path, body)
+  // The file holds the encryption key; keep it readable by its owner only.
+  chmod_private(path)
 }
 
 ///|

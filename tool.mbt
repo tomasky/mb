@@ -16,12 +16,13 @@ pub const MOONCAKES_DOWNLOAD : String = "https://download.mooncakes.io"
 /// Persisted metadata for one installed tool version. `bin` records where the
 /// executables were copied; it is optional because records written before it
 /// existed only have `bins`.
+#derive(ToJson, FromJson)
 pub struct ToolMeta {
   name : String
   version : String
   bins : Array[String]
   bin : String?
-} derive(ToJson, FromJson)
+}
 
 ///|
 pub extend ToolMeta with ToJson::{to_json}
@@ -175,6 +176,13 @@ fn ensure_bin_free(
 }
 
 ///|
+/// Remove a tool version's staged binaries. Called before (re)staging so a
+/// reinstall that no longer ships some executable does not keep it around.
+fn reset_staged(dir : String) -> Unit {
+  try_remove(path_join(dir, "bin"))
+}
+
+///|
 /// Copy a built or downloaded executable into `<dir>/bin/<name>`, so the bin
 /// directory only ever holds symlinks into the tool directory.
 fn stage_binary(
@@ -198,6 +206,7 @@ fn link_binaries(
 ) -> Unit raise MbError {
   mkdir_p(bin)
   let tbin = path_join(dir, "bin")
+  prune_links(bin, dir, names)
   for name in names {
     let dest = path_join(bin, name)
     if !run_ok(
@@ -207,6 +216,29 @@ fn link_binaries(
         shell_quote(dest),
       ) {
       raise MbError("failed to link " + dest)
+    }
+  }
+}
+
+///|
+/// Remove links in `bin` that point into `dir` but are not part of `names`,
+/// so reinstalling a tool with fewer executables (e.g. `-i`) does not leave
+/// stale entry points behind.
+fn prune_links(bin : String, dir : String, names : Array[String]) -> Unit {
+  if !dir_exists(bin) {
+    return
+  }
+  for entry in list_dir_unsafe(bin) {
+    if in_array(names, entry) {
+      continue
+    }
+    let link = path_join(bin, entry)
+    match readlink(link) {
+      Some(target) =>
+        if shim_points_into(target, dir) {
+          run_ok("rm -f -- " + shell_quote(link)) |> ignore
+        }
+      None => ()
     }
   }
 }
@@ -365,6 +397,7 @@ pub fn tool_install(
   }
   let names = choose_names(all_names, interactive)
   ensure_bin_free(bin_dir, names, dir, force)
+  reset_staged(dir)
   for (tool_name, path) in built {
     if in_array(names, tool_name) {
       stage_binary(dir, tool_name, path)
@@ -393,12 +426,12 @@ pub fn installed_tools() -> Array[ToolMeta] raise MbError {
   if !dir_exists(root) {
     return out
   }
-  for key in list_dir(root) {
+  for key in list_dir_unsafe(root) {
     let versions_dir = path_join(root, key)
     if !dir_exists(versions_dir) {
       continue
     }
-    for version in list_dir(versions_dir) {
+    for version in list_dir_unsafe(versions_dir) {
       let meta_path = path_join(path_join(versions_dir, version), "tool.json")
       if !file_exists(meta_path) {
         continue

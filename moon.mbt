@@ -538,23 +538,27 @@ pub fn env_prefix(tc : ToolchainEnv) -> String {
 /// then installs the latest release.
 pub fn resolve_toolchain(explicit : String) -> ToolchainEnv raise MbError {
   if explicit != "" {
-    match find_installed_toolchain(explicit) {
-      Some(v) =>
-        return {
-          moon: path_join(toolchain_dir(v), "bin/moon"),
-          home: Some(toolchain_dir(v)),
-          bin: Some(path_join(toolchain_dir(v), "bin")),
+    let version = match find_installed_toolchain(explicit) {
+      Some(v) => v
+      None => {
+        moon_install(explicit, false)
+        // Re-resolve: `moon_install` stores `latest`/`nightly` under a
+        // different name, and a bare `0.10.14` may resolve to `0.10.14+hash`.
+        match find_installed_toolchain(explicit) {
+          Some(v) => v
+          None =>
+            raise MbError(
+              "toolchain '" + explicit + "' was installed but cannot be found",
+            )
         }
-      None => moon_install(explicit, false)
+      }
     }
+    // Use the requested toolchain, not the default: installing an extra
+    // version must not silently build with the previously selected one.
+    return toolchain_env(version)
   }
   match effective_toolchain() {
-    Some(v) =>
-      {
-        moon: path_join(toolchain_dir(v), "bin/moon"),
-        home: Some(toolchain_dir(v)),
-        bin: Some(path_join(toolchain_dir(v), "bin")),
-      }
+    Some(v) => toolchain_env(v)
     None =>
       match system_toolchain() {
         Some(tc) => tc
@@ -564,12 +568,19 @@ pub fn resolve_toolchain(explicit : String) -> ToolchainEnv raise MbError {
             Some(v) => v
             None => raise MbError("failed to install a MoonBit toolchain")
           }
-          {
-            moon: path_join(toolchain_dir(v), "bin/moon"),
-            home: Some(toolchain_dir(v)),
-            bin: Some(path_join(toolchain_dir(v), "bin")),
-          }
+          toolchain_env(v)
         }
       }
+  }
+}
+
+///|
+/// The environment for invoking one installed toolchain.
+fn toolchain_env(version : String) -> ToolchainEnv raise MbError {
+  let home = toolchain_dir(version)
+  {
+    moon: path_join(home, "bin/moon"),
+    home: Some(home),
+    bin: Some(path_join(home, "bin")),
   }
 }

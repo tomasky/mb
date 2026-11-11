@@ -3,7 +3,7 @@ name: release
 # Builds `mb` for every supported target and attaches the binaries to a
 # GitHub Release. The npm package in `npmjs/` downloads these assets.
 #
-#   git tag v0.2.1 && git push origin v0.2.1
+#   git tag v0.2.2 && git push origin v0.2.2
 
 on:
   push:

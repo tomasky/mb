@@ -8,7 +8,7 @@
 /// or `--all`.
 
 ///|
-pub const MB_VERSION : String = "0.2.1"
+pub const MB_VERSION : String = "0.2.2"
 
 ///|
 fn tail(a : Array[String], from : Int32) -> Array[String] {
@@ -773,7 +773,12 @@ fn parse_names_flags(args : Array[String]) -> Result[NamesFlags, String] {
     if a == "--all" {
       all = true
       i = i + 1
-    } else if a == "--moon" && i + 1 < args.length() {
+    } else if a == "--moon" {
+      if i + 1 >= args.length() {
+        return Err(
+          "a value is required for '--moon <VERSION>' but none was supplied",
+        )
+      }
       moon = args[i + 1]
       i = i + 2
     } else if a.has_prefix("--moon=") {
